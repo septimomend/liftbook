@@ -315,3 +315,33 @@ test("rapid taps on steppers cannot zoom the page", async () => {
   assert.equal(body, "manipulation");
   assert.deepEqual(errors, []);
 });
+
+test("settings: replace pictures from files matched by name", async () => {
+  const { page, errors } = await newPage();
+  const plan = structuredClone(fixture);
+  plan.days[0].exercises[0].image = "idb:a1b2c3d4e5f6";
+  await page.goto(base);
+  await page.waitForSelector("main.view > *");
+  await page.evaluate(async plan => {
+    const s = await import("./js/store.js");
+    await s.replaceAll({ program: plan, settings: { restSec: 90 }, logs: [],
+      images: [{ id: "a1b2c3d4e5f6", type: "image/jpeg", blob: new Blob([new Uint8Array([1])], { type: "image/jpeg" }) }] });
+  }, plan);
+  await page.goto(base + "#/settings");
+  const pic = readFileSync(new URL("./fixtures/pic.jpg", import.meta.url));
+  await page.locator("input[name=pictures]").setInputFiles([
+    { name: "a1b2c3d4e5f6.jpg", mimeType: "image/jpeg", buffer: pic },
+    { name: "IMG_0001.jpg", mimeType: "image/jpeg", buffer: pic },
+  ]);
+  await page.getByText("Pictures replaced: 1. Not matched: IMG_0001.jpg").waitFor();
+  const rec = await page.evaluate(async () => {
+    const r = await (await import("./js/store.js")).getImage("a1b2c3d4e5f6");
+    return { size: r.blob.size, dirty: r.dirty, type: r.type };
+  });
+  assert.ok(rec.size > 100);
+  assert.equal(rec.dirty, true);
+  assert.equal(rec.type, "image/jpeg");
+  await page.goto(base + "#/edit/day/d1");
+  await page.locator(".list .pic img").first().waitFor();
+  assert.deepEqual(errors, []);
+});

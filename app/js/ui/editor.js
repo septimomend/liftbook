@@ -4,7 +4,7 @@ import {
   DEFAULTS, newId, parseWeight, updateExercise, addExercise, removeExercise, moveExercise,
   addDay, removeDay, moveDay, updateDay,
 } from "../model.js";
-import { h, mount, picture, fmtWeight } from "../dom.js";
+import { h, mount, picture, fmtWeight, toJpeg } from "../dom.js";
 
 export async function render(root, ctx) {
   const { params } = ctx;
@@ -76,16 +76,7 @@ async function dayScreen(root, { navigate, params }) {
 
 /** Resize a picked photo to ≤ 800 px JPEG and store it; returns "idb:<id>". */
 async function storePicture(file) {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, 800 / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  const g = canvas.getContext("2d");
-  g.fillStyle = "#fff";
-  g.fillRect(0, 0, canvas.width, canvas.height);
-  g.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  const blob = await new Promise(r => canvas.toBlob(r, "image/jpeg", 0.8));
+  const blob = await toJpeg(file);
   const id = newId();
   await putImage({ id, type: "image/jpeg", blob });
   return `idb:${id}`;

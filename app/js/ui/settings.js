@@ -1,9 +1,10 @@
-import { getProgram, getSettings, saveSettings, allLogs, allImages, replaceAll } from "../store.js";
+import { getProgram, getSettings, saveSettings, allLogs, allImages, replaceAll, replaceImage, getSyncMeta } from "../store.js";
 import { t, setLang, resolveLang } from "../i18n.js";
 import { buildBackup, parseBackup, backupFileName, shareOrDownload } from "../backup.js";
 import { fmt } from "../timer.js";
-import { h, mount } from "../dom.js";
-import { renderDriveCard } from "../sync-ui.js";
+import { h, mount, toJpeg, forgetPictures } from "../dom.js";
+import { renderDriveCard, runSync, syncConfigured } from "../sync-ui.js";
+import { pictureIdFromFileName } from "../model.js";
 
 export async function render(root, ctx) {
   const settings = await getSettings();
@@ -44,6 +45,35 @@ export async function render(root, ctx) {
     }
   });
 
+  // Replace pictures with files named like the originals ("<id>.jpg"), e.g. picked
+  // from Google Drive in the iPhone Files app. Same ids, so the plan needs no change.
+  const picturesInput = h("input", { type: "file", name: "pictures", accept: "image/*", multiple: true, style: "display:none" });
+  picturesInput.addEventListener("change", async () => {
+    const files = [...(picturesInput.files ?? [])];
+    picturesInput.value = "";
+    if (!files.length) return;
+    try {
+      const ids = new Set((await allImages()).map(i => i.id));
+      let replaced = 0;
+      const unmatched = [];
+      for (const file of files) {
+        const id = pictureIdFromFileName(file.name, ids);
+        if (!id) { unmatched.push(file.name); continue; }
+        await replaceImage(id, "image/jpeg", await toJpeg(file));
+        replaced++;
+      }
+      forgetPictures();
+      say(t("Pictures replaced: {n}.", { n: replaced })
+        + (unmatched.length ? ` ${t("Not matched: {names}", { names: unmatched.join(", ") })}` : ""), unmatched.length > 0 && !replaced);
+      if (replaced && syncConfigured() && (await getSyncMeta()).signedIn) {
+        await runSync(false);
+        await renderDriveCard(driveCard);
+      }
+    } catch (e) {
+      say(e.message, true);
+    }
+  });
+
   const exportBackup = async () => {
     try {
       const data = { program: await getProgram(), settings: await getSettings(), logs: await allLogs(), images: await allImages() };
@@ -67,7 +97,10 @@ export async function render(root, ctx) {
       h("p", { class: "muted" }, t("Opens the share sheet — pick Google Drive (or Files) to save it.")),
       h("button", { class: "big", onClick: () => importInput.click() }, t("Import file")),
       h("p", { class: "muted" }, t("Load a backup or your liftbook-import.json. Replaces the data on this phone.")),
-      importInput),
+      importInput,
+      h("button", { class: "big", onClick: () => picturesInput.click() }, t("Replace pictures")),
+      h("p", { class: "muted" }, t("Pick picture files named like the ones in the Liftbook folder on Drive (for example 1a2b3c4d5e6f.jpg). Each replaces the picture with the same name.")),
+      picturesInput),
     status,
   );
   await renderDriveCard(driveCard);

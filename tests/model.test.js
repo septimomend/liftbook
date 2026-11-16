@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   DEFAULTS, newId, parseWeight, nextDay, performed, setWorkingWeight,
   updateExercise, addExercise, removeExercise, moveExercise,
-  addDay, removeDay, moveDay, updateDay, lastSessionSets,
+  addDay, removeDay, moveDay, updateDay, lastSessionSets, pictureIdFromFileName,
 } from "../app/js/model.js";
 
 const ex = (id, extra = {}) => ({
@@ -100,4 +100,14 @@ test("lastSessionSets", () => {
   ];
   assert.deepEqual(lastSessionSets(logs, "a", "s2").map(l => l.id), ["2", "1"]);
   assert.deepEqual(lastSessionSets([], "a", "s2"), []);
+});
+
+test("pictureIdFromFileName matches a picture by file name", () => {
+  const ids = new Set(["a1b2c3d4e5f6", "0123456789ab"]);
+  assert.equal(pictureIdFromFileName("a1b2c3d4e5f6.jpg", ids), "a1b2c3d4e5f6");
+  assert.equal(pictureIdFromFileName("A1B2C3D4E5F6.JPEG", ids), "a1b2c3d4e5f6");
+  assert.equal(pictureIdFromFileName("a1b2c3d4e5f6 (1).png", ids), "a1b2c3d4e5f6"); // Drive "keep both" copy
+  assert.equal(pictureIdFromFileName("0123456789ab", ids), "0123456789ab");
+  assert.equal(pictureIdFromFileName("IMG_1234.jpg", ids), null);
+  assert.equal(pictureIdFromFileName("ffffffffffff.jpg", ids), null);
 });

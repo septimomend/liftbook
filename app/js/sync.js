@@ -72,10 +72,14 @@ export async function syncOnce({ drive, store, now, refreshPictures = false }) {
   // (the owner may upload a new version of a picture file there — its md5 then differs)
   let remoteImages = await drive.listImages(folderId);
   const onDrive = new Set(remoteImages.map(i => i.imageId));
+  const fileOf = new Map(remoteImages.map(i => [i.imageId, i.fileId]));
   const justUploaded = new Set();
   for (const img of await store.allImages()) {
-    if (onDrive.has(img.id)) continue;
-    await drive.createFile(folderId, `${img.id}.jpg`, img.type || "image/jpeg", img.blob, { liftbookImage: img.id });
+    if (onDrive.has(img.id) && !img.dirty) continue;
+    if (onDrive.has(img.id)) await drive.updateFile(fileOf.get(img.id), img.blob, img.type || "image/jpeg");
+    else await drive.createFile(folderId, `${img.id}.jpg`, img.type || "image/jpeg", img.blob, { liftbookImage: img.id });
+    const { dirty, ...clean } = img;
+    if (dirty) await store.putImage(clean);
     justUploaded.add(img.id);
     pushed = true;
   }

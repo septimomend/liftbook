@@ -31,7 +31,12 @@ class FakeDrive {
     this.files.set(id, { parent, name, mime, body, appProperties, md5: `md5-${this.n}` });
     return id;
   }
-  async updateFile(id, body) { this.updates++; this.files.get(id).body = body; }
+  async updateFile(id, body, mime) {
+    this.updates++;
+    const f = this.files.get(id);
+    f.body = body;
+    if (f.appProperties?.liftbookImage) { f.md5 = `md5-${++this.n}`; f.mime = mime; }
+  }
   async listImages(folderId) {
     return [...this.files].filter(([, f]) => f.parent === folderId && f.appProperties?.liftbookImage)
       .map(([fileId, f]) => ({ fileId, imageId: f.appProperties.liftbookImage, md5: f.md5 }));
@@ -223,4 +228,23 @@ test("syncNow passes refreshPictures through", async () => {
   const reads = drive.blobReads;
   await syncNow({ clientId: "x", getToken: async () => "tok", makeDriveFn: () => drive, refreshPictures: true });
   assert.equal(drive.blobReads, reads + 1);
+});
+
+test("picture replaced on the phone overwrites the Drive file, and is not downloaded back", async () => {
+  await store.saveProgram(plan(10, "Day 1", "idb:img1"), { stamp: false });
+  await store.putImage({ id: "img1", type: "image/jpeg", blob: jpeg() });
+  const drive = new FakeDrive();
+  await syncOnce({ drive, store, now: 1 });
+  const fileId = drive.imageFileId("img1");
+  await store.replaceImage("img1", "image/jpeg", new Blob([new Uint8Array([4, 2])], { type: "image/jpeg" }));
+  const reads = drive.blobReads;
+  const r = await syncOnce({ drive, store, now: 2 });
+  assert.equal(r.pushed, true);
+  assert.equal(drive.imageFileId("img1"), fileId);
+  assert.deepEqual([...new Uint8Array(await drive.files.get(fileId).body.arrayBuffer())], [4, 2]);
+  assert.equal(drive.files.get(fileId).mime, "image/jpeg");
+  assert.equal(drive.blobReads, reads);
+  assert.equal((await store.getImage("img1")).dirty, undefined);
+  assert.deepEqual(await syncOnce({ drive, store, now: 3 }), { pulled: false, pushed: false });
+  assert.equal(drive.blobReads, reads);
 });

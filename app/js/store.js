@@ -97,6 +97,8 @@ export async function lastLog() {
 export const putImage = img => write("images", s => s.put(img));
 export const getImage = async id => (await read("images", s => s.get(id))) ?? null;
 export const allImages = () => read("images", s => s.getAll());
+/** Picture changed on this phone: keep its id, mark it for upload over the Drive copy. */
+export const replaceImage = (id, type, blob) => putImage({ id, type, blob, dirty: true });
 
 /** Seed the program only when none is stored; never overwrite the owner's data. */
 export async function bootstrap(fetchSeed) {

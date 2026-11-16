@@ -63,10 +63,10 @@ export function makeDrive(getToken) {
       });
       return r.id;
     },
-    async updateFile(fileId, body) {
+    async updateFile(fileId, body, mime = "application/json") {
       await call(`${UPLOAD}/files/${fileId}?uploadType=media`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": mime },
         body,
       });
     },

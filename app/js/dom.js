@@ -56,6 +56,20 @@ export function picture(image, cls = "pic") {
   return box;
 }
 
+/** Any picked image file -> JPEG blob, at most 800 px on the long side, on white. */
+export async function toJpeg(file) {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, 800 / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  const g = canvas.getContext("2d");
+  g.fillStyle = "#fff";
+  g.fillRect(0, 0, canvas.width, canvas.height);
+  g.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  return new Promise(r => canvas.toBlob(r, "image/jpeg", 0.8));
+}
+
 export function fmtWeight(w) {
   return w == null ? "—" : t("{w} kg", { w });
 }

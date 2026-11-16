@@ -106,3 +106,12 @@ export function lastSessionSets(logs, exerciseId, excludeSessionId) {
   const latest = mine.reduce((a, b) => (b.ts > a.ts ? b : a)).sessionId;
   return mine.filter(l => l.sessionId === latest).sort((a, b) => a.set - b.set);
 }
+
+/**
+ * Which stored picture a file replaces, by its name: "<id>.jpg", any case or image
+ * extension, also Drive's "<id> (1).jpg" copies. null when the name matches none.
+ */
+export function pictureIdFromFileName(name, ids) {
+  const stem = name.toLowerCase().replace(/\.[a-z0-9]+$/, "").replace(/\s*\(\d+\)$/, "").trim();
+  return ids.has(stem) ? stem : null;
+}

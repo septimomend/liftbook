@@ -73,3 +73,11 @@ test("Drive requests bypass the browser cache", async () => {
   await makeDrive(async () => "t").readText("y");
   assert.deepEqual(calls.map(c => c.init.cache), ["no-store", "no-store"]);
 });
+
+test("updateFile sends the given content type", async () => {
+  const calls = mockFetch(() => ({ body: {} }));
+  await makeDrive(async () => "t").updateFile("F9", new Blob(["IMG"]), "image/jpeg");
+  assert.match(calls[0].url, /upload\/drive\/v3\/files\/F9\?uploadType=media/);
+  assert.equal(calls[0].init.method, "PATCH");
+  assert.equal(calls[0].init.headers["Content-Type"], "image/jpeg");
+});
