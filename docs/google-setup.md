@@ -23,7 +23,11 @@ Below it is written as **APP ORIGIN**, meaning the scheme and host only, with no
 
 1. Go to **APIs & Services → OAuth consent screen**. In the newer console this is
    **Google Auth Platform → Branding / Audience / Data access**.
-2. **App name:** `Liftbook`. **User support email** and **developer contact:** your email.
+2. **Branding page** (required before you can publish): **App name** `Liftbook`, **User
+   support email** and **Developer contact email** = your email. Leave **App logo** empty
+   (a logo triggers Google's verification review). App domain fields can stay empty; if
+   publishing still refuses, set **Application home page** to the app URL and add the
+   host (e.g. `septimomend.github.io`) under **Authorised domains**. Save.
 3. **Audience / User type:** **External**.
 4. **Data access / Scopes:** add `https://www.googleapis.com/auth/drive.file`. It's the one
    described as "See, edit, create, and delete only the specific Google Drive files you use
