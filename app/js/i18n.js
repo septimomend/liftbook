@@ -167,6 +167,8 @@ export const UK = {
   "Not signed in. Your data stays on this phone until you sign in.": "Вхід не виконано. Дані зберігаються лише на цьому телефоні, доки ви не ввійдете.",
   "Syncing…": "Синхронізація…",
   "Sync now": "Синхронізувати",
+  "Re-download pictures from Drive": "Завантажити картинки з Drive заново",
+  "pictures updated: {n}": "оновлено картинок: {n}",
   "Sign in & sync": "Увійти й синхронізувати",
   "Sign out of Google on this phone? Your data stays here and on Drive.": "Вийти з Google на цьому телефоні? Дані залишаться тут і на Drive.",
   "Sign out": "Вийти",

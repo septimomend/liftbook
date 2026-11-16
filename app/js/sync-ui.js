@@ -3,6 +3,7 @@ import { syncNow } from "./sync.js";
 import { t, getLang } from "./i18n.js";
 import { getSyncMeta, saveSyncMeta } from "./store.js";
 import { GOOGLE_CLIENT_ID } from "./config.js";
+import { VERSION } from "./version.js";
 import { preloadAuth, signOut } from "./auth.js";
 import { h, mount } from "./dom.js";
 
@@ -20,8 +21,8 @@ function hideBanner() {
 }
 
 /** interactive=true only from a tap: it may open Google's "Continue as …" sheet. */
-export async function runSync(interactive) {
-  const r = await syncNow({ interactive });
+export async function runSync(interactive, { refreshPictures = false } = {}) {
+  const r = await syncNow({ interactive, refreshPictures });
   if (r.ok) {
     hideBanner();
     if (r.pulled) window.dispatchEvent(new Event("liftbook:data"));
@@ -57,24 +58,31 @@ export async function renderDriveCard(card) {
   const meta = await getSyncMeta();
   const status = h("p", { class: "muted", role: "status" },
     meta.signedIn
-      ? meta.lastSyncedAt ? t("Last synced {time}", { time: new Date(meta.lastSyncedAt).toLocaleString(getLang()) }) : t("Signed in, not synced yet.")
+      ? meta.lastSyncedAt
+        ? [t("Last synced {time}", { time: new Date(meta.lastSyncedAt).toLocaleString(getLang()) }),
+           meta.picturesUpdated ? ` · ${t("pictures updated: {n}", { n: meta.picturesUpdated })}` : ""].join("")
+        : t("Signed in, not synced yet.")
       : t("Not signed in. Your data stays on this phone until you sign in."));
-  const syncBtn = h("button", { class: "big primary", onClick: async () => {
-    syncBtn.disabled = true;
+  const go = refreshPictures => async () => {
+    syncBtn.disabled = picsBtn.disabled = true;
     status.textContent = t("Syncing…");
-    const r = await runSync(true);
-    syncBtn.disabled = false;
+    const r = await runSync(true, { refreshPictures });
+    syncBtn.disabled = picsBtn.disabled = false;
     if (r.ok) renderDriveCard(card);
     else status.textContent = reasonText(r.reason);
-  } }, meta.signedIn ? t("Sync now") : t("Sign in & sync"));
+  };
+  const syncBtn = h("button", { class: "big primary", onClick: go(false) }, meta.signedIn ? t("Sync now") : t("Sign in & sync"));
+  const picsBtn = h("button", { class: "link", onClick: go(true) }, t("Re-download pictures from Drive"));
   mount(card,
     status,
     syncBtn,
+    meta.signedIn ? picsBtn : null,
     meta.signedIn ? h("button", { class: "link danger", onClick: async () => {
       if (!confirm(t("Sign out of Google on this phone? Your data stays here and on Drive."))) return;
       signOut();
       await saveSyncMeta({ ...meta, signedIn: false });
       hideBanner();
       renderDriveCard(card);
-    } }, t("Sign out")) : null);
+    } }, t("Sign out")) : null,
+    h("p", { class: "muted" }, `Liftbook ${VERSION}`));
 }

@@ -8,7 +8,7 @@ const q = s => s.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 export function makeDrive(getToken) {
   async function call(url, init = {}) {
     const token = await getToken();
-    const res = await fetch(url, { ...init, headers: { ...(init.headers ?? {}), Authorization: `Bearer ${token}` } });
+    const res = await fetch(url, { ...init, cache: "no-store", headers: { ...(init.headers ?? {}), Authorization: `Bearer ${token}` } });
     if (res.status === 401) throw new Error("needs-sign-in");
     if (!res.ok) throw new Error(`Google Drive error ${res.status}`);
     return res;

@@ -48,7 +48,7 @@ function imageRefs(program) {
   return ids;
 }
 
-export async function syncOnce({ drive, store, now }) {
+export async function syncOnce({ drive, store, now, refreshPictures = false }) {
   const meta = await store.getSyncMeta();
   const folderId = await drive.findOrCreateFolder(FOLDER);
   const file = await drive.findFile(folderId, DATA_FILE);
@@ -84,10 +84,10 @@ export async function syncOnce({ drive, store, now }) {
   const imageMd5 = {};
   const byId = new Map(remoteImages.map(i => [i.imageId, i]));
   const wanted = imageRefs(merged.program);
-  let picturesPulled = false;
+  let picturesUpdated = 0;
   for (const [id, r] of byId) {
     const mine = await store.getImage(id);
-    const stale = !mine || (!justUploaded.has(id) && known[id] !== r.md5);
+    const stale = !mine || (!justUploaded.has(id) && (refreshPictures || known[id] !== r.md5));
     if (stale && !wanted.has(id)) { // not used by the plan: leave it, check again when it is
       if (id in known) imageMd5[id] = known[id];
       continue;
@@ -95,13 +95,13 @@ export async function syncOnce({ drive, store, now }) {
     if (stale) {
       const blob = await drive.readBlob(r.fileId);
       await store.putImage({ id, type: blob.type || "image/jpeg", blob });
-      picturesPulled = true;
+      picturesUpdated++;
     }
     imageMd5[id] = r.md5;
   }
 
-  await store.saveSyncMeta({ ...meta, folderId, fileId, signedIn: true, lastSyncedAt: now, uploadedImageIds: [...byId.keys()], imageMd5 });
-  return { pulled: pulled || picturesPulled, pushed };
+  await store.saveSyncMeta({ ...meta, folderId, fileId, signedIn: true, lastSyncedAt: now, uploadedImageIds: [...byId.keys()], imageMd5, picturesUpdated });
+  return { pulled: pulled || picturesUpdated > 0, pushed };
 }
 
 let running = null;
@@ -109,6 +109,7 @@ let running = null;
 /** Glue for the UI. Never throws; local data is untouched on failure. */
 export function syncNow({
   interactive = false,
+  refreshPictures = false,
   clientId = GOOGLE_CLIENT_ID,
   getToken = auth.getToken,
   makeDriveFn = makeDrive,
@@ -120,7 +121,7 @@ export function syncNow({
     try {
       await getToken({ interactive });
       const drive = makeDriveFn(() => getToken({ interactive: false }));
-      return { ok: true, ...(await syncOnce({ drive, store, now: Date.now() })) };
+      return { ok: true, ...(await syncOnce({ drive, store, now: Date.now(), refreshPictures })) };
     } catch (e) {
       if (e.message === "needs-sign-in" || e.message === "needs-permission") {
         auth.forgetToken?.();

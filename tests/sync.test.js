@@ -200,3 +200,27 @@ test("phone synced before picture versions were tracked re-downloads pictures on
   assert.equal((await syncOnce({ drive, store, now: 2 })).pulled, true);
   assert.deepEqual([...new Uint8Array(await (await store.getImage("img1")).blob.arrayBuffer())], [9]);
 });
+
+test("refreshPictures re-downloads every picture the plan uses and counts them", async () => {
+  await store.saveProgram(plan(10, "Day 1", "idb:img1"), { stamp: false });
+  await store.putImage({ id: "img1", type: "image/jpeg", blob: jpeg() });
+  const drive = new FakeDrive();
+  await syncOnce({ drive, store, now: 1 });
+  drive.files.get(drive.imageFileId("img1")).body = new Blob([new Uint8Array([5])], { type: "image/jpeg" }); // md5 unchanged
+  assert.equal((await syncOnce({ drive, store, now: 2 })).pulled, false);
+  assert.equal((await store.getSyncMeta()).picturesUpdated, 0);
+  const r = await syncOnce({ drive, store, now: 3, refreshPictures: true });
+  assert.equal(r.pulled, true);
+  assert.deepEqual([...new Uint8Array(await (await store.getImage("img1")).blob.arrayBuffer())], [5]);
+  assert.equal((await store.getSyncMeta()).picturesUpdated, 1);
+});
+
+test("syncNow passes refreshPictures through", async () => {
+  await store.saveProgram(plan(10, "Day 1", "idb:img1"), { stamp: false });
+  await store.putImage({ id: "img1", type: "image/jpeg", blob: jpeg() });
+  const drive = new FakeDrive();
+  await syncOnce({ drive, store, now: 1 });
+  const reads = drive.blobReads;
+  await syncNow({ clientId: "x", getToken: async () => "tok", makeDriveFn: () => drive, refreshPictures: true });
+  assert.equal(drive.blobReads, reads + 1);
+});

@@ -66,3 +66,10 @@ test("names with quotes are escaped in queries", async () => {
   await makeDrive(async () => "t").findFile("F", "it's.json");
   assert.match(new URL(calls[0].url).searchParams.get("q"), /name='it\\'s\.json'/);
 });
+
+test("Drive requests bypass the browser cache", async () => {
+  const calls = mockFetch(() => ({ body: "x" }));
+  await makeDrive(async () => "t").readBlob("x");
+  await makeDrive(async () => "t").readText("y");
+  assert.deepEqual(calls.map(c => c.init.cache), ["no-store", "no-store"]);
+});
