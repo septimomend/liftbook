@@ -1,4 +1,5 @@
 import { getProgram, getSession, saveSession, lastLog } from "../store.js";
+import { t } from "../i18n.js";
 import { nextDay, newId } from "../model.js";
 import { h, mount, fmtWeight } from "../dom.js";
 import { runSync, syncConfigured } from "../sync-ui.js";
@@ -10,13 +11,13 @@ export async function render(root, { navigate, params }) {
   if (session) {
     const day = program.days.find(d => d.id === session.dayId);
     root.append(
-      h("h1", null, "Workout in progress"),
-      h("button", { class: "big primary", onClick: () => navigate("#/workout") }, `Resume ${day?.name ?? "workout"}`),
+      h("h1", null, t("Workout in progress")),
+      h("button", { class: "big primary", onClick: () => navigate("#/workout") }, day ? t("Resume {day}", { day: day.name }) : t("Resume workout")),
       h("button", { class: "link danger", onClick: async () => {
-        if (!confirm("End this workout? Logged sets are kept.")) return;
+        if (!confirm(t("End this workout? Logged sets are kept."))) return;
         await saveSession(null);
         navigate("#/");
-      } }, "End workout"),
+      } }, t("End workout")),
     );
     return;
   }
@@ -24,7 +25,7 @@ export async function render(root, { navigate, params }) {
   if (!program.days.length) {
     root.append(
       h("h1", null, "Liftbook"),
-      h("p", { class: "muted" }, "No plan on this phone yet."),
+      h("p", { class: "muted" }, t("No plan on this phone yet.")),
       syncConfigured()
         ? h("button", { class: "big primary", onClick: async e => {
             const btn = e.currentTarget; // null after the await
@@ -32,11 +33,11 @@ export async function render(root, { navigate, params }) {
             const r = await runSync(true);
             btn.disabled = false;
             if (r.ok) navigate("#/");
-            else alert(r.reason === "offline" ? "You're offline." : "Google sign-in didn't complete.");
-          } }, "Sign in to Google Drive")
-        : h("a", { class: "big primary", href: "#/settings" }, "Sign in to Google Drive"),
-      h("a", { class: "big", href: "#/settings" }, "Import file"),
-      h("a", { class: "link", href: "#/edit" }, "or build a plan from scratch"),
+            else alert(r.reason === "offline" ? t("You're offline.") : t("Google sign-in didn't complete."));
+          } }, t("Sign in to Google Drive"))
+        : h("a", { class: "big primary", href: "#/settings" }, t("Sign in to Google Drive")),
+      h("a", { class: "big", href: "#/settings" }, t("Import file")),
+      h("a", { class: "link", href: "#/edit" }, t("or build a plan from scratch")),
     );
     return;
   }
@@ -56,16 +57,16 @@ export async function render(root, { navigate, params }) {
   const draw = () => {
     const day = selected;
     mount(card, [
-      h("div", { class: "muted" }, day.id === suggested.id ? "Up next" : "Selected"),
+      h("div", { class: "muted" }, day.id === suggested.id ? t("Up next") : t("Selected")),
       h("h1", null, day.name),
       day.rest
-        ? [h("p", { class: "rest-day" }, "Rest day"),
-           h("button", { class: "link", onClick: () => start(day) }, "Train anyway")]
+        ? [h("p", { class: "rest-day" }, t("Rest day")),
+           h("button", { class: "link", onClick: () => start(day) }, t("Train anyway"))]
         : [h("ul", { class: "plan-list" },
             day.exercises.map(e => h("li", null,
               h("span", null, e.name),
               h("b", null, e.type === "cardio" ? e.duration ?? "" : fmtWeight(e.weight))))),
-           h("button", { class: "big primary", disabled: !day.exercises.length, onClick: () => start(day) }, `Start ${day.name}`)],
+           h("button", { class: "big primary", disabled: !day.exercises.length, onClick: () => start(day) }, t("Start {day}", { day: day.name }))],
     ]);
     chips.replaceChildren(...program.days.map(d =>
       h("button", { class: `chip${d.id === day.id ? " on" : ""}${d.rest ? " rest" : ""}`,

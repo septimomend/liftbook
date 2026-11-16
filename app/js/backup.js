@@ -1,3 +1,4 @@
+import { t } from "./i18n.js";
 // Backup file: one JSON with program, settings, logs and user-added pictures (base64).
 
 const APP = "liftbook";
@@ -34,12 +35,12 @@ export function parseBackup(text) {
   try {
     b = JSON.parse(text);
   } catch {
-    throw new Error("This file is not a Liftbook backup (not valid JSON).");
+    throw new Error(t("This file is not a Liftbook backup (not valid JSON)."));
   }
-  if (!b || typeof b !== "object" || b.app !== APP) throw new Error("This file is not a Liftbook backup.");
-  if (b.format !== FORMAT) throw new Error(`Unsupported backup format: ${b.format}.`);
-  if (!b.program || !Array.isArray(b.program.days)) throw new Error("Backup is damaged: program is missing.");
-  if (!Array.isArray(b.logs)) throw new Error("Backup is damaged: workout log is missing.");
+  if (!b || typeof b !== "object" || b.app !== APP) throw new Error(t("This file is not a Liftbook backup."));
+  if (b.format !== FORMAT) throw new Error(t("Unsupported backup format: {format}.", { format: b.format }));
+  if (!b.program || !Array.isArray(b.program.days)) throw new Error(t("Backup is damaged: program is missing."));
+  if (!Array.isArray(b.logs)) throw new Error(t("Backup is damaged: workout log is missing."));
   const images = Array.isArray(b.images) ? b.images : [];
   return {
     program: b.program,

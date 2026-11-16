@@ -1,4 +1,5 @@
 import { getProgram, saveProgram, putImage } from "../store.js";
+import { t, tn } from "../i18n.js";
 import {
   DEFAULTS, newId, parseWeight, updateExercise, addExercise, removeExercise, moveExercise,
   addDay, removeDay, moveDay, updateDay,
@@ -13,25 +14,25 @@ export async function render(root, ctx) {
 }
 
 const rowButtons = (onUp, onDown, onDelete) => [
-  h("button", { class: "mini", "aria-label": "Move up", onClick: onUp }, "↑"),
-  h("button", { class: "mini", "aria-label": "Move down", onClick: onDown }, "↓"),
-  h("button", { class: "mini danger", "aria-label": "Delete", onClick: onDelete }, "✕"),
+  h("button", { class: "mini", "aria-label": t("Move up"), onClick: onUp }, "↑"),
+  h("button", { class: "mini", "aria-label": t("Move down"), onClick: onDown }, "↓"),
+  h("button", { class: "mini danger", "aria-label": t("Delete"), onClick: onDelete }, "✕"),
 ];
 
 async function daysScreen(root, { navigate }) {
   let program = await getProgram();
   const save = async p => { program = p; await saveProgram(p); draw(); };
   const draw = () => mount(root,
-    h("h1", null, "Plan"),
+    h("h1", null, t("Plan")),
     h("ul", { class: "list" }, program.days.map(d => h("li", null,
       h("a", { href: `#/edit/day/${encodeURIComponent(d.id)}` },
-        d.name, h("div", { class: "muted" }, d.rest ? "Rest day" : `${d.exercises.length} exercises`)),
+        d.name, h("div", { class: "muted" }, d.rest ? t("Rest day") : tn(d.exercises.length, "exercises"))),
       rowButtons(
         () => save(moveDay(program, d.id, -1)),
         () => save(moveDay(program, d.id, 1)),
-        () => confirm(`Delete ${d.name} and its exercises?`) && save(removeDay(program, d.id)))))),
+        () => confirm(t("Delete {name} and its exercises?", { name: d.name })) && save(removeDay(program, d.id)))))),
     h("button", { class: "big", onClick: () => save(addDay(program,
-      { id: newId(), name: `Day ${program.days.length + 1}`, rest: false, exercises: [] })) }, "Add day"),
+      { id: newId(), name: t("Day {n}", { n: program.days.length + 1 }), rest: false, exercises: [] })) }, t("Add day")),
   );
   draw();
 }
@@ -48,10 +49,10 @@ async function dayScreen(root, { navigate, params }) {
     const rest = h("input", { type: "checkbox", name: "rest", checked: day.rest, style: "width:auto;min-height:0" });
     rest.addEventListener("change", () => save(updateDay(program, dayId, { rest: rest.checked })));
     mount(root,
-      h("a", { class: "back", href: "#/edit" }, "‹ Plan"),
-      h("label", null, "Day name"), name,
-      h("label", { style: "display:flex;gap:8px;align-items:center" }, rest, "Rest day"),
-      h("h2", null, "Exercises"),
+      h("a", { class: "back", href: "#/edit" }, t("‹ Plan")),
+      h("label", null, t("Day name")), name,
+      h("label", { style: "display:flex;gap:8px;align-items:center" }, rest, t("Rest day")),
+      h("h2", null, t("Exercises")),
       h("ul", { class: "list" }, day.exercises.map(e => h("li", null,
         picture(e.image, "pic pic-thumb"),
         h("a", { href: `#/edit/ex/${encodeURIComponent(e.id)}` }, e.name,
@@ -59,15 +60,15 @@ async function dayScreen(root, { navigate, params }) {
         rowButtons(
           () => save(moveExercise(program, e.id, -1)),
           () => save(moveExercise(program, e.id, 1)),
-          () => confirm(`Delete ${e.name}?`) && save(removeExercise(program, e.id)))))),
+          () => confirm(t("Delete {name}?", { name: e.name })) && save(removeExercise(program, e.id)))))),
       h("button", { class: "big", onClick: async () => {
-        const ex = { id: newId(), group: day.exercises.at(-1)?.group ?? "", name: "New exercise", type: "strength",
+        const ex = { id: newId(), group: day.exercises.at(-1)?.group ?? "", name: t("New exercise"), type: "strength",
           weight: null, duration: null, sets: DEFAULTS.sets, repsMin: DEFAULTS.repsMin, repsMax: DEFAULTS.repsMax,
           image: null, alternatives: [] };
         program = addExercise(program, dayId, ex);
         await saveProgram(program);
         navigate(`#/edit/ex/${encodeURIComponent(ex.id)}`);
-      } }, "Add exercise"),
+      } }, t("Add exercise")),
     );
   };
   draw();
@@ -98,8 +99,8 @@ function pictureField(image, name, onChange) {
   });
   return h("div", { class: "row", style: "align-items:center" },
     picture(image, "pic pic-thumb"),
-    h("button", { onClick: () => input.click() }, image ? "Change picture" : "Add picture"),
-    image ? h("button", { class: "link danger", onClick: () => onChange(null) }, "Remove") : null,
+    h("button", { onClick: () => input.click() }, image ? t("Change picture") : t("Add picture")),
+    image ? h("button", { class: "link danger", onClick: () => onChange(null) }, t("Remove")) : null,
     input);
 }
 
@@ -131,8 +132,8 @@ async function exerciseScreen(root, { navigate, params }) {
     if (!hit) { navigate("#/edit"); return; }
     const { day, ex } = hit;
     const type = h("select", { name: "type" },
-      h("option", { value: "strength", selected: ex.type === "strength" }, "Strength"),
-      h("option", { value: "cardio", selected: ex.type === "cardio" }, "Cardio"));
+      h("option", { value: "strength", selected: ex.type === "strength" }, t("Strength")),
+      h("option", { value: "cardio", selected: ex.type === "cardio" }, t("Cardio")));
     type.addEventListener("change", () => patch({ type: type.value }, true));
 
     const alts = ex.alternatives.map((a, i) => {
@@ -142,46 +143,46 @@ async function exerciseScreen(root, { navigate, params }) {
         ex.alternatives = list;
       };
       return h("div", { class: "alt-edit" },
-        field("Name", `alt-name-${i}`, a.name, v => v.trim() && setAlt({ name: v.trim() })),
-        field("Weight (kg, optional)", `alt-weight-${i}`, a.weight, (v, input) => {
+        field(t("Name"), `alt-name-${i}`, a.name, v => v.trim() && setAlt({ name: v.trim() })),
+        field(t("Weight (kg, optional)"), `alt-weight-${i}`, a.weight, (v, input) => {
           if (v.trim() === "") return setAlt({ weight: null });
           const w = parseWeight(v);
-          if (w == null) { input.setCustomValidity("Enter a number"); input.reportValidity(); return; }
+          if (w == null) { input.setCustomValidity(t("Enter a number")); input.reportValidity(); return; }
           input.setCustomValidity("");
           setAlt({ weight: w });
         }, { inputmode: "decimal" }),
-        h("label", null, "Picture"),
+        h("label", null, t("Picture")),
         pictureField(a.image, `alt-picture-${i}`, img => setAlt({ image: img }, true)),
-        h("button", { class: "link danger", onClick: () => confirm(`Remove ${a.name}?`) &&
-          patch({ alternatives: ex.alternatives.filter(x => x.id !== a.id) }, true) }, "Remove alternative"));
+        h("button", { class: "link danger", onClick: () => confirm(t("Remove {name}?", { name: a.name })) &&
+          patch({ alternatives: ex.alternatives.filter(x => x.id !== a.id) }, true) }, t("Remove alternative")));
     });
 
     mount(root, [
       h("a", { class: "back", href: `#/edit/day/${encodeURIComponent(day.id)}` }, `‹ ${day.name}`),
-      field("Exercise name", "name", ex.name, v => v.trim() && patch({ name: v.trim() })),
-      field("Muscle group", "group", ex.group, v => patch({ group: v.trim() })),
-      h("label", null, "Type"), type,
+      field(t("Exercise name"), "name", ex.name, v => v.trim() && patch({ name: v.trim() })),
+      field(t("Muscle group"), "group", ex.group, v => patch({ group: v.trim() })),
+      h("label", null, t("Type")), type,
       ex.type === "cardio"
-        ? field("Duration", "duration", ex.duration, v => patch({ duration: v.trim() || null }), { placeholder: "20-25 min" })
+        ? field(t("Duration"), "duration", ex.duration, v => patch({ duration: v.trim() || null }), { placeholder: "20-25 min" })
         : [
-            field("Working weight (kg)", "weight", ex.weight, (v, input) => {
+            field(t("Working weight (kg)"), "weight", ex.weight, (v, input) => {
               if (v.trim() === "") return patch({ weight: null });
               const w = parseWeight(v);
-              if (w == null) { input.setCustomValidity("Enter a number"); input.reportValidity(); return; }
+              if (w == null) { input.setCustomValidity(t("Enter a number")); input.reportValidity(); return; }
               input.setCustomValidity("");
               patch({ weight: w });
             }, { inputmode: "decimal" }),
             h("div", { class: "row" },
-              h("div", null, field("Sets", "sets", ex.sets, v => int(v, 1) && patch({ sets: int(v, 1) }), { inputmode: "numeric" })),
-              h("div", null, field("Reps min", "repsMin", ex.repsMin, v => int(v, 1) && patch({ repsMin: int(v, 1) }), { inputmode: "numeric" })),
-              h("div", null, field("Reps max", "repsMax", ex.repsMax, v => int(v, 1) && patch({ repsMax: int(v, 1) }), { inputmode: "numeric" }))),
+              h("div", null, field(t("Sets"), "sets", ex.sets, v => int(v, 1) && patch({ sets: int(v, 1) }), { inputmode: "numeric" })),
+              h("div", null, field(t("Reps min"), "repsMin", ex.repsMin, v => int(v, 1) && patch({ repsMin: int(v, 1) }), { inputmode: "numeric" })),
+              h("div", null, field(t("Reps max"), "repsMax", ex.repsMax, v => int(v, 1) && patch({ repsMax: int(v, 1) }), { inputmode: "numeric" }))),
           ],
-      h("label", null, "Picture"),
+      h("label", null, t("Picture")),
       pictureField(ex.image, "picture", img => patch({ image: img }, true)),
-      h("h2", null, "Alternatives"),
+      h("h2", null, t("Alternatives")),
       alts,
       h("button", { class: "big", onClick: () => patch({ alternatives: [...ex.alternatives,
-        { id: newId(), name: "Alternative", weight: null, image: null }] }, true) }, "Add alternative"),
+        { id: newId(), name: t("Alternative"), weight: null, image: null }] }, true) }, t("Add alternative")),
     ]);
   };
   draw();

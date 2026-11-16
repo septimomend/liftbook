@@ -1,4 +1,5 @@
-import { bootstrap } from "./store.js";
+import { bootstrap, getSettings } from "./store.js";
+import { t, setLang, resolveLang } from "./i18n.js";
 import { h } from "./dom.js";
 import { autoSync } from "./sync-ui.js";
 import * as today from "./ui/today.js";
@@ -43,10 +44,10 @@ function nav(active) {
   const item = (key, hash, label, icon) =>
     h("a", { href: hash, class: key === active ? "on" : "" }, h("span", { class: "ico" }, icon), label);
   return h("nav", { class: "tabs" },
-    item("today", "#/", "Today", "●"),
-    item("plan", "#/edit", "Plan", "☰"),
-    item("history", "#/history", "History", "↺"),
-    item("settings", "#/settings", "Settings", "⚙"));
+    item("today", "#/", t("Today"), "●"),
+    item("plan", "#/edit", t("Plan"), "☰"),
+    item("history", "#/history", t("History"), "↺"),
+    item("settings", "#/settings", t("Settings"), "⚙"));
 }
 
 async function render() {
@@ -74,6 +75,7 @@ window.addEventListener("liftbook:data", () => render());
 async function start() {
   navigator.storage?.persist?.().catch(() => {});
   await bootstrap(async () => ({ version: 1, days: [], updatedAt: 0 }));
+  setLang(resolveLang((await getSettings()).lang, navigator.languages));
   if ("serviceWorker" in navigator && (location.protocol === "https:" || ["localhost", "127.0.0.1"].includes(location.hostname))) {
     navigator.serviceWorker.register("./sw.js").catch(() => {});
   }
@@ -82,5 +84,5 @@ async function start() {
 }
 
 start().catch(e => {
-  root.replaceChildren(h("main", { class: "view" }, h("p", { class: "error" }, `Could not start: ${e.message}`)));
+  root.replaceChildren(h("main", { class: "view" }, h("p", { class: "error" }, t("Could not start: {msg}", { msg: e.message }))));
 });

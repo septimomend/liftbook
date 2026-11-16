@@ -1,4 +1,5 @@
 import { getImage } from "./store.js";
+import { t } from "./i18n.js";
 
 /** h("div", {class: "x", onClick: fn}, child, ...) — children may be strings, nodes, arrays, null. */
 export function h(tag, props, ...children) {
@@ -50,5 +51,5 @@ export function picture(image, cls = "pic") {
 }
 
 export function fmtWeight(w) {
-  return w == null ? "—" : `${w} kg`;
+  return w == null ? "—" : t("{w} kg", { w });
 }

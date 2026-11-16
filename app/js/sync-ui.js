@@ -1,5 +1,6 @@
 // Sync glue for screens: start-up sync, the "Tap to sync" banner, the Settings card.
 import { syncNow } from "./sync.js";
+import { t, getLang } from "./i18n.js";
 import { getSyncMeta, saveSyncMeta } from "./store.js";
 import { GOOGLE_CLIENT_ID } from "./config.js";
 import { preloadAuth, signOut } from "./auth.js";
@@ -9,7 +10,7 @@ let banner = null;
 
 function showBanner() {
   if (banner) return;
-  banner = h("button", { class: "sync-banner", onClick: () => runSync(true) }, "Tap to sync with Google Drive");
+  banner = h("button", { class: "sync-banner", onClick: () => runSync(true) }, t("Tap to sync with Google Drive"));
   document.body.append(banner);
 }
 
@@ -42,38 +43,38 @@ export async function autoSync() {
 export const syncConfigured = () => Boolean(GOOGLE_CLIENT_ID);
 
 const reasonText = r => ({
-  "needs-sign-in": "Google sign-in needed.",
-  "needs-permission": "Liftbook needs access to its Drive files — sign in again and keep the Google Drive box ticked.",
-  offline: "Offline — changes will sync later.",
-  "not-configured": "Not configured.",
-}[r] ?? `Sync failed: ${r}`);
+  "needs-sign-in": t("Google sign-in needed."),
+  "needs-permission": t("Liftbook needs access to its Drive files — sign in again and keep the Google Drive box ticked."),
+  offline: t("Offline — changes will sync later."),
+  "not-configured": t("Not configured."),
+}[r] ?? t("Sync failed: {reason}", { reason: r }));
 
 export async function renderDriveCard(card) {
   if (!GOOGLE_CLIENT_ID) {
-    mount(card, h("p", { class: "muted" }, "Not configured yet. Google sync turns on once the app's Google client ID is set (see docs/google-setup.md)."));
+    mount(card, h("p", { class: "muted" }, t("Not configured yet. Google sync turns on once the app's Google client ID is set (see docs/google-setup.md).")));
     return;
   }
   const meta = await getSyncMeta();
   const status = h("p", { class: "muted", role: "status" },
     meta.signedIn
-      ? meta.lastSyncedAt ? `Last synced ${new Date(meta.lastSyncedAt).toLocaleString()}` : "Signed in, not synced yet."
-      : "Not signed in. Your data stays on this phone until you sign in.");
+      ? meta.lastSyncedAt ? t("Last synced {time}", { time: new Date(meta.lastSyncedAt).toLocaleString(getLang()) }) : t("Signed in, not synced yet.")
+      : t("Not signed in. Your data stays on this phone until you sign in."));
   const syncBtn = h("button", { class: "big primary", onClick: async () => {
     syncBtn.disabled = true;
-    status.textContent = "Syncing…";
+    status.textContent = t("Syncing…");
     const r = await runSync(true);
     syncBtn.disabled = false;
     if (r.ok) renderDriveCard(card);
     else status.textContent = reasonText(r.reason);
-  } }, meta.signedIn ? "Sync now" : "Sign in & sync");
+  } }, meta.signedIn ? t("Sync now") : t("Sign in & sync"));
   mount(card,
     status,
     syncBtn,
     meta.signedIn ? h("button", { class: "link danger", onClick: async () => {
-      if (!confirm("Sign out of Google on this phone? Your data stays here and on Drive.")) return;
+      if (!confirm(t("Sign out of Google on this phone? Your data stays here and on Drive."))) return;
       signOut();
       await saveSyncMeta({ ...meta, signedIn: false });
       hideBanner();
       renderDriveCard(card);
-    } }, "Sign out") : null);
+    } }, t("Sign out")) : null);
 }

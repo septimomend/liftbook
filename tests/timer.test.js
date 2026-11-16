@@ -15,14 +15,14 @@ test("startRest", () => {
 });
 
 test("restView before end", () => {
-  assert.deepEqual(restView(end, end - 72_000), { over: false, text: "1:12" });
-  assert.deepEqual(restView(end, end - 500), { over: false, text: "0:01" });
+  assert.deepEqual(restView(end, end - 72_000), { over: false, clock: "1:12", text: "1:12" });
+  assert.deepEqual(restView(end, end - 500), { over: false, clock: "0:01", text: "0:01" });
 });
 
 test("restView after end", () => {
-  assert.deepEqual(restView(end, end), { over: true, text: "Rest over · 0:00 ago" });
-  assert.deepEqual(restView(end, end + 23_000), { over: true, text: "Rest over · 0:23 ago" });
-  assert.deepEqual(restView(end, end + 3_725_000), { over: true, text: "Rest over · 62:05 ago" });
+  assert.deepEqual(restView(end, end), { over: true, clock: "0:00", text: "Rest over · 0:00 ago" });
+  assert.deepEqual(restView(end, end + 23_000), { over: true, clock: "0:23", text: "Rest over · 0:23 ago" });
+  assert.deepEqual(restView(end, end + 3_725_000), { over: true, clock: "62:05", text: "Rest over · 62:05 ago" });
 });
 
 test("adjustRest", () => {

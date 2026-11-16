@@ -1,4 +1,5 @@
 import { h } from "../dom.js";
+import { t } from "../i18n.js";
 import { restView, adjustRest } from "../timer.js";
 
 /**
@@ -13,13 +14,13 @@ export function showRest(parent, { endsAt, caption, onChange, onClose }) {
     h("div", { class: "muted" }, caption),
     clock,
     h("div", { class: "row" },
-      h("button", { onClick: () => shift(-15) }, "−15s"),
-      h("button", { onClick: () => shift(15) }, "+15s"),
-      h("button", { class: "primary", onClick: () => close() }, "Skip")));
+      h("button", { onClick: () => shift(-15) }, t("−15s")),
+      h("button", { onClick: () => shift(15) }, t("+15s")),
+      h("button", { class: "primary", onClick: () => close() }, t("Skip"))));
 
   const tick = () => {
     const v = restView(end, Date.now());
-    clock.textContent = v.text;
+    clock.textContent = v.over ? t("Rest over · {time} ago", { time: v.clock }) : v.clock;
     overlay.classList.toggle("over", v.over);
   };
   const shift = d => {

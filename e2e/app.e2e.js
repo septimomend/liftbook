@@ -20,8 +20,8 @@ after(async () => {
   server?.close();
 });
 
-async function newPage({ serviceWorkers = "block" } = {}) {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, serviceWorkers });
+async function newPage({ serviceWorkers = "block", locale = "en-US" } = {}) {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, serviceWorkers, locale });
   ctx.setDefaultTimeout(5000);
   const page = await ctx.newPage();
   const errors = [];
@@ -283,5 +283,35 @@ test("fresh install: dismissed Google sign-in shows a message and re-enables the
   await page.waitForFunction(() => !document.querySelector(".big.primary")?.disabled);
   assert.equal(dialogs.length, 1);
   assert.match(dialogs[0], /sign-in didn't complete/);
+  assert.deepEqual(errors, []);
+});
+
+test("ukrainian phone gets ukrainian UI; settings can switch language", async () => {
+  const { page, errors } = await newPage({ locale: "uk-UA" });
+  await loadPlan(page);
+  await page.getByRole("button", { name: "Почати Day 1" }).waitFor(); // user data stays as typed
+  await page.getByRole("link", { name: "Сьогодні" }).waitFor();
+  await page.getByRole("button", { name: "Почати Day 1" }).click();
+  await page.locator(".w-target", { hasText: "Підхід 1 з 3 · 8–12 повторень" }).waitFor();
+  await page.locator(".w-weight", { hasText: "70 кг" }).waitFor();
+  await shot(page, "workout-uk");
+  await page.goto(base + "#/settings");
+  await page.locator("select[name=language]").selectOption("en");
+  await page.getByRole("link", { name: "Today" }).waitFor();
+  await page.reload();
+  await page.getByRole("heading", { name: "Settings" }).waitFor();
+  assert.deepEqual(errors, []);
+});
+
+test("rapid taps on steppers cannot zoom the page", async () => {
+  const { page, errors } = await newPage();
+  await startDay1(page);
+  const viewport = await page.locator('meta[name="viewport"]').getAttribute("content");
+  assert.match(viewport, /maximum-scale=1/);
+  assert.match(viewport, /user-scalable=no/);
+  const touch = await page.locator(".stepper button").first().evaluate(el => getComputedStyle(el).touchAction);
+  assert.equal(touch, "manipulation");
+  const body = await page.evaluate(() => getComputedStyle(document.documentElement).touchAction);
+  assert.equal(body, "manipulation");
   assert.deepEqual(errors, []);
 });

@@ -16,6 +16,10 @@ export function adjustRest(endsAt, now, deltaSec) {
 
 export function restView(endsAt, now) {
   const left = endsAt - now;
-  if (left > 0) return { over: false, text: fmt(Math.ceil(left / 1000)) };
-  return { over: true, text: `Rest over · ${fmt(-left / 1000)} ago` };
+  if (left > 0) {
+    const clock = fmt(Math.ceil(left / 1000));
+    return { over: false, clock, text: clock };
+  }
+  const clock = fmt(-left / 1000);
+  return { over: true, clock, text: `Rest over · ${clock} ago` };
 }

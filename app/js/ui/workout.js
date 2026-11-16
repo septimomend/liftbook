@@ -1,3 +1,4 @@
+import { t } from "../i18n.js";
 import {
   getProgram, saveProgram, getSession, saveSession, getSettings,
   addLog, deleteLog, logsForExercise,
@@ -8,7 +9,7 @@ import { h, mount, picture, fmtWeight } from "../dom.js";
 import { showRest } from "./rest.js";
 import { runSync, syncConfigured } from "../sync-ui.js";
 
-const setLabel = l => (l.done ? "done" : `${l.weight}×${l.reps}`);
+const setLabel = l => (l.done ? t("done") : `${l.weight}×${l.reps}`);
 
 export async function render(root, { navigate }) {
   let session = await getSession();
@@ -63,7 +64,7 @@ export async function render(root, { navigate }) {
       const input = h("input", { name: "working-weight", inputmode: "decimal", value: perf.weight ?? "", enterkeyhint: "done" });
       const save = async () => {
         const w = parseWeight(input.value);
-        if (w == null) { input.setCustomValidity("Enter a weight"); input.reportValidity(); return; }
+        if (w == null) { input.setCustomValidity(t("Enter a weight")); input.reportValidity(); return; }
         program = setWorkingWeight(program, ex.id, altId, w);
         await saveProgram(program);
         editingWeight = false;
@@ -71,12 +72,12 @@ export async function render(root, { navigate }) {
       };
       input.addEventListener("keydown", e => e.key === "Enter" && save());
       weightEl = h("div", { class: "row" }, input,
-        h("button", { class: "primary", onClick: save }, "Save"),
-        h("button", { onClick: () => { editingWeight = false; draw(); } }, "Cancel"));
+        h("button", { class: "primary", onClick: save }, t("Save")),
+        h("button", { onClick: () => { editingWeight = false; draw(); } }, t("Cancel")));
       queueMicrotask(() => input.focus());
     } else {
       weightEl = h("button", { class: "w-weight", onClick: () => { editingWeight = true; draw(); } },
-        fmtWeight(perf.weight), h("small", null, "✎ edit"));
+        fmtWeight(perf.weight), h("small", null, t("✎ edit")));
     }
 
     // logging controls
@@ -86,11 +87,11 @@ export async function render(root, { navigate }) {
         await addLog({ id: newId(), sessionId: session.id, ts: Date.now(), dayId: d.id, exerciseId: ex.id,
           altId, name: perf.name, set: nextSet, weight: null, reps: null, done: true });
         draw();
-      } }, "Done");
+      } }, t("Done"));
     } else {
-      const wIn = h("input", { name: "log-weight", inputmode: "decimal", value: perf.weight ?? "", "aria-label": "Weight" });
-      const rIn = h("input", { name: "log-reps", inputmode: "numeric", value: ex.repsMax, "aria-label": "Reps" });
-      const btn = h("button", { class: "big primary" }, `Log set & rest ${fmt(settings.restSec)}`);
+      const wIn = h("input", { name: "log-weight", inputmode: "decimal", value: perf.weight ?? "", "aria-label": t("Weight") });
+      const rIn = h("input", { name: "log-reps", inputmode: "numeric", value: ex.repsMax, "aria-label": t("Reps") });
+      const btn = h("button", { class: "big primary" }, t("Log set & rest {time}", { time: fmt(settings.restSec) }));
       const validate = () => {
         btn.disabled = parseWeight(wIn.value) == null || !(parseInt(rIn.value, 10) > 0);
       };
@@ -109,13 +110,13 @@ export async function render(root, { navigate }) {
           altId, name: perf.name, set: nextSet, weight, reps });
         await persistSession({ restEndsAt: startRest(Date.now(), settings.restSec) });
         await draw();
-        openRest(`Resting · next: set ${nextSet + 1} of ${perf.name}`);
+        openRest(t("Resting · next: set {n} of {name}", { n: nextSet + 1, name: perf.name }));
       });
       validate();
       logRow = [
         h("div", { class: "row" },
-          h("div", { class: "stepper" }, h("button", { onClick: step(wIn, -2.5, true), "aria-label": "Less weight" }, "−"), wIn, h("span", { class: "unit" }, "kg"), h("button", { onClick: step(wIn, 2.5, true), "aria-label": "More weight" }, "+")),
-          h("div", { class: "stepper" }, h("button", { onClick: step(rIn, -1), "aria-label": "Fewer reps" }, "−"), rIn, h("span", { class: "unit" }, "reps"), h("button", { onClick: step(rIn, 1), "aria-label": "More reps" }, "+"))),
+          h("div", { class: "stepper" }, h("button", { onClick: step(wIn, -2.5, true), "aria-label": t("Less weight") }, "−"), wIn, h("span", { class: "unit" }, t("kg")), h("button", { onClick: step(wIn, 2.5, true), "aria-label": t("More weight") }, "+")),
+          h("div", { class: "stepper" }, h("button", { onClick: step(rIn, -1), "aria-label": t("Fewer reps") }, "−"), rIn, h("span", { class: "unit" }, t("reps")), h("button", { onClick: step(rIn, 1), "aria-label": t("More reps") }, "+"))),
         btn,
       ];
     }
@@ -132,16 +133,16 @@ export async function render(root, { navigate }) {
       perf.image ? picture(perf.image, "pic pic-hero") : null,
       h("div", { class: "w-name" }, perf.name),
       weightEl,
-      isCardio ? null : h("div", { class: "w-target" }, `Set ${Math.min(nextSet, Math.max(ex.sets, nextSet))} of ${ex.sets} · ${ex.repsMin}–${ex.repsMax} reps`),
-      mine.length ? h("div", { class: "w-sets" }, mine.map(l => h("button", { class: "set", title: "Tap to delete", onClick: async () => {
-        if (!confirm(`Delete set ${l.set} (${setLabel(l)})?`)) return;
+      isCardio ? null : h("div", { class: "w-target" }, t("Set {n} of {sets} · {min}–{max} reps", { n: nextSet, sets: ex.sets, min: ex.repsMin, max: ex.repsMax })),
+      mine.length ? h("div", { class: "w-sets" }, mine.map(l => h("button", { class: "set", title: t("Tap to delete"), onClick: async () => {
+        if (!confirm(t("Delete set {n} ({set})?", { n: l.set, set: setLabel(l) }))) return;
         await deleteLog(l.id);
         draw();
       } }, setLabel(l)))) : null,
-      last.length ? h("div", { class: "w-last" }, `Last time: ${last.map(setLabel).join(" · ")}`) : null,
+      last.length ? h("div", { class: "w-last" }, t("Last time: {sets}", { sets: last.map(setLabel).join(" · ") })) : null,
       logRow,
       ex.alternatives.length ? h("div", { class: "alts" },
-        h("div", { class: "muted" }, "Alternatives"),
+        h("div", { class: "muted" }, t("Alternatives")),
         ex.alternatives.map(a => h("button", { class: `alt${a.id === altId ? " on" : ""}`, onClick: async () => {
           editingWeight = false;
           const swaps = { ...session.swaps };
@@ -155,9 +156,9 @@ export async function render(root, { navigate }) {
           delete swaps[ex.id];
           await persistSession({ swaps });
           draw();
-        } }, "Back to main") : null) : null,
+        } }, t("Back to main")) : null) : null,
       h("div", { class: "w-nav" },
-        h("button", { disabled: index === 0, onClick: () => go(-1) }, "Prev"),
+        h("button", { disabled: index === 0, onClick: () => go(-1) }, t("Prev")),
         isLast
           ? h("button", { class: "primary", onClick: async () => {
               rest?.destroy();
@@ -165,13 +166,13 @@ export async function render(root, { navigate }) {
               await saveSession(null);
               navigate("#/");
               await sync;
-            } }, "Finish")
-          : h("button", { onClick: () => go(1) }, "Next")),
+            } }, t("Finish"))
+          : h("button", { onClick: () => go(1) }, t("Next"))),
     ]);
   }
 
   await draw();
-  if (session.restEndsAt) openRest("Resting");
+  if (session.restEndsAt) openRest(t("Resting"));
 
   return {
     cleanup: () => rest?.destroy(),
