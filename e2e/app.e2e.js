@@ -345,3 +345,29 @@ test("settings: replace pictures from files matched by name", async () => {
   await page.locator(".list .pic img").first().waitFor();
   assert.deepEqual(errors, []);
 });
+
+test("workout picture frame hugs a wide picture: no bars above or below", async () => {
+  const { page, errors } = await newPage();
+  const plan = structuredClone(fixture);
+  plan.days[0].exercises[0].image = "idb:wide";
+  await page.goto(base);
+  await page.waitForSelector("main.view > *");
+  await page.evaluate(async plan => {
+    const c = Object.assign(document.createElement("canvas"), { width: 800, height: 450 });
+    c.getContext("2d").fillRect(0, 0, 800, 450);
+    const blob = await new Promise(r => c.toBlob(r, "image/jpeg"));
+    const s = await import("./js/store.js");
+    await s.replaceAll({ program: plan, settings: { restSec: 90 }, logs: [], images: [{ id: "wide", type: "image/jpeg", blob }] });
+  }, plan);
+  await page.reload();
+  await page.getByRole("button", { name: "Start Day 1" }).click();
+  const img = page.locator(".pic-hero img");
+  await img.waitFor();
+  await page.waitForFunction(() => document.querySelector(".pic-hero img")?.complete);
+  const box = await page.locator(".pic-hero").boundingBox();
+  const pic = await img.boundingBox();
+  assert.ok(Math.abs(box.height - pic.height) < 1, `frame ${box.height} vs picture ${pic.height}`);
+  assert.ok(Math.abs(pic.width / pic.height - 800 / 450) < 0.02);
+  await shot(page, "workout-picture");
+  assert.deepEqual(errors, []);
+});

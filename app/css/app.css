@@ -111,6 +111,9 @@ label { display: block; margin: 12px 0 4px; color: var(--muted); font-size: 14px
 .pic img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .pic.empty { background: var(--surface); }
 .pic-hero { height: 34vh; max-height: 280px; min-height: 160px; }
+/* with a picture, the frame takes the picture's own shape: no bars above/below a wide one */
+.pic-hero:has(img) { height: auto; min-height: 0; max-height: none; background: transparent; }
+.pic-hero img { width: 100%; height: auto; max-height: min(34vh, 280px); }
 .pic-thumb { width: 56px; height: 56px; flex: 0 0 56px; border-radius: 10px; }
 
 /* workout */
