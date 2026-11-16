@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "updatedAt": 1,
+  "days": [
+    { "id": "d1", "name": "Day 1", "rest": false, "exercises": [
+      { "id": "e1", "group": "Chest", "name": "Bench press", "type": "strength", "weight": 70, "duration": null,
+        "sets": 3, "repsMin": 8, "repsMax": 12, "image": null,
+        "alternatives": [ { "id": "e1-a1", "name": "Dumbbell press", "weight": null, "image": null } ] },
+      { "id": "e2", "group": "Chest", "name": "Cable flye", "type": "strength", "weight": 30, "duration": null,
+        "sets": 3, "repsMin": 10, "repsMax": 15, "image": null, "alternatives": [] },
+      { "id": "e3", "group": "Cardio", "name": "Incline walk", "type": "cardio", "weight": null, "duration": "20 min",
+        "sets": 3, "repsMin": 8, "repsMax": 12, "image": null, "alternatives": [] }
+    ] },
+    { "id": "d2", "name": "Day 2", "rest": true, "exercises": [] },
+    { "id": "d3", "name": "Day 3", "rest": false, "exercises": [
+      { "id": "e4", "group": "Legs", "name": "Squat", "type": "strength", "weight": 100, "duration": null,
+        "sets": 3, "repsMin": 8, "repsMax": 12, "image": null, "alternatives": [] }
+    ] }
+  ]
+}

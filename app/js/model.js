@@ -1,0 +1,108 @@
+// Pure plan model: defaults, parsing, immutable plan edits, day sequencing.
+
+export const DEFAULTS = Object.freeze({ sets: 3, repsMin: 8, repsMax: 12, restSec: 90 });
+
+export function newId() {
+  return crypto.randomUUID();
+}
+
+/** "22,5" -> 22.5; empty, non-numeric or negative -> null. */
+export function parseWeight(input) {
+  const s = String(input ?? "").trim().replace(",", ".");
+  if (s === "" || !/^\d*\.?\d+$|^\d+\.$/.test(s)) return null;
+  const n = Number(s);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+/** Day after lastDayId in program order (wrapping); first day when unknown. */
+export function nextDay(program, lastDayId) {
+  const days = program.days;
+  const i = days.findIndex(d => d.id === lastDayId);
+  return i < 0 ? days[0] : days[(i + 1) % days.length];
+}
+
+/** What is actually performed: the alternative's fields when swapped, else the exercise's. */
+export function performed(exercise, altId) {
+  const alt = altId ? exercise.alternatives.find(a => a.id === altId) : null;
+  const src = alt ?? exercise;
+  return { name: src.name, weight: src.weight ?? null, image: src.image ?? null };
+}
+
+function findExercise(program, exerciseId) {
+  for (const day of program.days) {
+    const i = day.exercises.findIndex(e => e.id === exerciseId);
+    if (i >= 0) return { day, i, ex: day.exercises[i] };
+  }
+  return null;
+}
+
+function withExercise(program, exerciseId, fn) {
+  const p = structuredClone(program);
+  const hit = findExercise(p, exerciseId);
+  if (hit) fn(hit);
+  return p;
+}
+
+function move(arr, i, delta) {
+  const j = i + delta;
+  if (i < 0 || j < 0 || j >= arr.length) return;
+  [arr[i], arr[j]] = [arr[j], arr[i]];
+}
+
+export function setWorkingWeight(program, exerciseId, altId, weight) {
+  return withExercise(program, exerciseId, ({ ex }) => {
+    const target = altId ? ex.alternatives.find(a => a.id === altId) : ex;
+    if (target) target.weight = weight;
+  });
+}
+
+export function updateExercise(program, exerciseId, patch) {
+  return withExercise(program, exerciseId, ({ ex }) => Object.assign(ex, patch));
+}
+
+export function addExercise(program, dayId, exercise) {
+  const p = structuredClone(program);
+  p.days.find(d => d.id === dayId)?.exercises.push(structuredClone(exercise));
+  return p;
+}
+
+export function removeExercise(program, exerciseId) {
+  return withExercise(program, exerciseId, ({ day, i }) => day.exercises.splice(i, 1));
+}
+
+export function moveExercise(program, exerciseId, delta) {
+  return withExercise(program, exerciseId, ({ day, i }) => move(day.exercises, i, delta));
+}
+
+export function addDay(program, day) {
+  const p = structuredClone(program);
+  p.days.push(structuredClone(day));
+  return p;
+}
+
+export function updateDay(program, dayId, patch) {
+  const p = structuredClone(program);
+  const d = p.days.find(x => x.id === dayId);
+  if (d) Object.assign(d, patch);
+  return p;
+}
+
+export function removeDay(program, dayId) {
+  const p = structuredClone(program);
+  p.days = p.days.filter(d => d.id !== dayId);
+  return p;
+}
+
+export function moveDay(program, dayId, delta) {
+  const p = structuredClone(program);
+  move(p.days, p.days.findIndex(d => d.id === dayId), delta);
+  return p;
+}
+
+/** Sets of the most recent session (other than excludeSessionId) for an exercise, by set #. */
+export function lastSessionSets(logs, exerciseId, excludeSessionId) {
+  const mine = logs.filter(l => l.exerciseId === exerciseId && l.sessionId !== excludeSessionId);
+  if (!mine.length) return [];
+  const latest = mine.reduce((a, b) => (b.ts > a.ts ? b : a)).sessionId;
+  return mine.filter(l => l.sessionId === latest).sort((a, b) => a.set - b.set);
+}
