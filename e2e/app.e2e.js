@@ -20,14 +20,16 @@ after(async () => {
   server?.close();
 });
 
-async function newPage() {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true });
+async function newPage({ serviceWorkers = "block" } = {}) {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, serviceWorkers });
   ctx.setDefaultTimeout(5000);
   const page = await ctx.newPage();
   const errors = [];
   page.on("pageerror", e => errors.push(e.message));
   page.on("console", m => m.type() === "error" && errors.push(m.text()));
   page.on("dialog", d => d.accept());
+  // never talk to the real Google client from tests; withFakeGoogle() overrides this
+  await page.route("**/js/config.js", r => r.fulfill({ contentType: "text/javascript", body: 'export const GOOGLE_CLIENT_ID = "";' }));
   return { page, errors };
 }
 
@@ -237,7 +239,7 @@ test("settings shows Drive as not configured without a client id", async () => {
 });
 
 test("installable and works offline after first load", async () => {
-  const { page, errors } = await newPage();
+  const { page, errors } = await newPage({ serviceWorkers: "allow" });
   await loadPlan(page);
   const manifest = await page.evaluate(async () => {
     const href = document.querySelector('link[rel="manifest"]')?.href;
