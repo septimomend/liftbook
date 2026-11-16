@@ -12,7 +12,7 @@ beforeEach(() => {
 
 /** In-memory stand-in for the Drive interface in app/js/drive.js. */
 class FakeDrive {
-  constructor() { this.files = new Map(); this.n = 0; this.creates = 0; this.updates = 0; }
+  constructor() { this.files = new Map(); this.n = 0; this.creates = 0; this.updates = 0; this.blobReads = 0; }
   async findOrCreateFolder(name) {
     for (const [id, f] of this.files) if (f.folder && f.name === name) return id;
     const id = `f${++this.n}`;
@@ -24,18 +24,21 @@ class FakeDrive {
     return null;
   }
   async readText(id) { return this.files.get(id).body; }
-  async readBlob(id) { return this.files.get(id).body; }
+  async readBlob(id) { this.blobReads++; return this.files.get(id).body; }
   async createFile(parent, name, mime, body, appProperties = {}) {
     this.creates++;
     const id = `x${++this.n}`;
-    this.files.set(id, { parent, name, mime, body, appProperties });
+    this.files.set(id, { parent, name, mime, body, appProperties, md5: `md5-${this.n}` });
     return id;
   }
   async updateFile(id, body) { this.updates++; this.files.get(id).body = body; }
   async listImages(folderId) {
     return [...this.files].filter(([, f]) => f.parent === folderId && f.appProperties?.liftbookImage)
-      .map(([fileId, f]) => ({ fileId, imageId: f.appProperties.liftbookImage }));
+      .map(([fileId, f]) => ({ fileId, imageId: f.appProperties.liftbookImage, md5: f.md5 }));
   }
+  /** The owner uploads a new version of a file in Drive: same file, new content. */
+  replaceContent(id, body) { const f = this.files.get(id); f.body = body; f.md5 = `md5-${++this.n}`; }
+  imageFileId(imageId) { return [...this.files].find(([, f]) => f.appProperties?.liftbookImage === imageId)[0]; }
   dataJson() {
     const f = [...this.files.values()].find(x => x.name === DATA_FILE);
     return f && JSON.parse(f.body);
@@ -167,4 +170,33 @@ test("writes made while a sync is in flight survive (log, tombstone, plan edit, 
   assert.equal((await store.getProgram()).days[0].name, "Edited during sync");
   assert.deepEqual(drive.dataJson().logs.map(l => l.id).sort(), ["during", "old", "remote"]);
   assert.equal(drive.dataJson().program.days[0].name, "Edited during sync");
+});
+
+test("picture replaced on Drive is downloaded over the phone's copy, once", async () => {
+  await store.saveProgram(plan(10, "Day 1", "idb:img1"), { stamp: false });
+  await store.putImage({ id: "img1", type: "image/jpeg", blob: jpeg() });
+  const drive = new FakeDrive();
+  await syncOnce({ drive, store, now: 1 });
+  assert.equal(drive.blobReads, 0);
+  const fresh = new Blob([new Uint8Array([0xff, 0xd8, 7, 7])], { type: "image/jpeg" });
+  drive.replaceContent(drive.imageFileId("img1"), fresh);
+  const r = await syncOnce({ drive, store, now: 2 });
+  assert.equal(r.pulled, true);
+  const got = new Uint8Array(await (await store.getImage("img1")).blob.arrayBuffer());
+  assert.deepEqual([...got], [0xff, 0xd8, 7, 7]);
+  const reads = drive.blobReads;
+  assert.deepEqual(await syncOnce({ drive, store, now: 3 }), { pulled: false, pushed: false });
+  assert.equal(drive.blobReads, reads);
+});
+
+test("phone synced before picture versions were tracked re-downloads pictures once", async () => {
+  await store.saveProgram(plan(10, "Day 1", "idb:img1"), { stamp: false });
+  await store.putImage({ id: "img1", type: "image/jpeg", blob: jpeg() });
+  const drive = new FakeDrive();
+  await syncOnce({ drive, store, now: 1 });
+  const { imageMd5, ...old } = await store.getSyncMeta();
+  await store.saveSyncMeta(old);
+  drive.replaceContent(drive.imageFileId("img1"), new Blob([new Uint8Array([9])], { type: "image/jpeg" }));
+  assert.equal((await syncOnce({ drive, store, now: 2 })).pulled, true);
+  assert.deepEqual([...new Uint8Array(await (await store.getImage("img1")).blob.arrayBuffer())], [9]);
 });

@@ -28,6 +28,12 @@ export function mount(el, ...children) {
 
 const urlCache = new Map();
 
+/** Drop cached picture URLs so the next render reads pictures again (after a sync replaced some). */
+export function forgetPictures() {
+  for (const url of urlCache.values()) URL.revokeObjectURL(url);
+  urlCache.clear();
+}
+
 /** "img/x.jpg" as-is; "idb:<id>" -> object URL of the stored picture. */
 export async function imgSrc(image) {
   if (!image) return null;

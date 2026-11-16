@@ -1,6 +1,6 @@
 import { bootstrap, getSettings } from "./store.js";
 import { t, setLang, resolveLang } from "./i18n.js";
-import { h } from "./dom.js";
+import { h, forgetPictures } from "./dom.js";
 import { autoSync } from "./sync-ui.js";
 import * as today from "./ui/today.js";
 import * as workout from "./ui/workout.js";
@@ -70,7 +70,7 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 window.addEventListener("hashchange", render);
-window.addEventListener("liftbook:data", () => render());
+window.addEventListener("liftbook:data", () => { forgetPictures(); render(); });
 
 async function start() {
   navigator.storage?.persist?.().catch(() => {});

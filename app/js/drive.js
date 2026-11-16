@@ -71,9 +71,9 @@ export function makeDrive(getToken) {
       });
     },
     async listImages(folderId) {
-      const files = await list(`'${q(folderId)}' in parents and trashed=false`);
+      const files = await list(`'${q(folderId)}' in parents and trashed=false`, "files(id,name,md5Checksum,appProperties)");
       return files.filter(f => f.appProperties?.liftbookImage)
-        .map(f => ({ fileId: f.id, imageId: f.appProperties.liftbookImage }));
+        .map(f => ({ fileId: f.id, imageId: f.appProperties.liftbookImage, md5: f.md5Checksum ?? null }));
     },
   };
 }

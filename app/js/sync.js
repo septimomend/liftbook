@@ -68,22 +68,40 @@ export async function syncOnce({ drive, store, now }) {
     pushed = true;
   }
 
-  // pictures: immutable by id — upload what Drive lacks, download what this phone lacks
-  const remoteImages = new Map((await drive.listImages(folderId)).map(i => [i.imageId, i.fileId]));
+  // pictures: upload what Drive lacks; download what this phone lacks, or what changed on Drive
+  // (the owner may upload a new version of a picture file there — its md5 then differs)
+  let remoteImages = await drive.listImages(folderId);
+  const onDrive = new Set(remoteImages.map(i => i.imageId));
+  const justUploaded = new Set();
   for (const img of await store.allImages()) {
-    if (remoteImages.has(img.id)) continue;
-    const id = await drive.createFile(folderId, `${img.id}.jpg`, img.type || "image/jpeg", img.blob, { liftbookImage: img.id });
-    remoteImages.set(img.id, id);
+    if (onDrive.has(img.id)) continue;
+    await drive.createFile(folderId, `${img.id}.jpg`, img.type || "image/jpeg", img.blob, { liftbookImage: img.id });
+    justUploaded.add(img.id);
     pushed = true;
   }
-  for (const id of imageRefs(merged.program)) {
-    if (!remoteImages.has(id) || (await store.getImage(id))) continue;
-    const blob = await drive.readBlob(remoteImages.get(id));
-    await store.putImage({ id, type: blob.type || "image/jpeg", blob });
+  if (justUploaded.size) remoteImages = await drive.listImages(folderId); // learn their md5
+  const known = meta.imageMd5 ?? {};
+  const imageMd5 = {};
+  const byId = new Map(remoteImages.map(i => [i.imageId, i]));
+  const wanted = imageRefs(merged.program);
+  let picturesPulled = false;
+  for (const [id, r] of byId) {
+    const mine = await store.getImage(id);
+    const stale = !mine || (!justUploaded.has(id) && known[id] !== r.md5);
+    if (stale && !wanted.has(id)) { // not used by the plan: leave it, check again when it is
+      if (id in known) imageMd5[id] = known[id];
+      continue;
+    }
+    if (stale) {
+      const blob = await drive.readBlob(r.fileId);
+      await store.putImage({ id, type: blob.type || "image/jpeg", blob });
+      picturesPulled = true;
+    }
+    imageMd5[id] = r.md5;
   }
 
-  await store.saveSyncMeta({ ...meta, folderId, fileId, signedIn: true, lastSyncedAt: now, uploadedImageIds: [...remoteImages.keys()] });
-  return { pulled, pushed };
+  await store.saveSyncMeta({ ...meta, folderId, fileId, signedIn: true, lastSyncedAt: now, uploadedImageIds: [...byId.keys()], imageMd5 });
+  return { pulled: pulled || picturesPulled, pushed };
 }
 
 let running = null;

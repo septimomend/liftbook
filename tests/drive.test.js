@@ -48,9 +48,10 @@ test("createFile sends multipart/related with metadata and content", async () =>
 test("listImages pages and filters by appProperties", async () => {
   let n = 0;
   mockFetch(() => (n++ === 0
-    ? { body: { files: [{ id: "1", appProperties: { liftbookImage: "a" } }, { id: "2" }], nextPageToken: "P" } }
-    : { body: { files: [{ id: "3", appProperties: { liftbookImage: "b" } }] } }));
-  assert.deepEqual(await makeDrive(async () => "t").listImages("F"), [{ fileId: "1", imageId: "a" }, { fileId: "3", imageId: "b" }]);
+    ? { body: { files: [{ id: "1", md5Checksum: "m1", appProperties: { liftbookImage: "a" } }, { id: "2" }], nextPageToken: "P" } }
+    : { body: { files: [{ id: "3", md5Checksum: "m3", appProperties: { liftbookImage: "b" } }] } }));
+  assert.deepEqual(await makeDrive(async () => "t").listImages("F"),
+    [{ fileId: "1", imageId: "a", md5: "m1" }, { fileId: "3", imageId: "b", md5: "m3" }]);
 });
 
 test("401 maps to needs-sign-in, other errors carry the status", async () => {

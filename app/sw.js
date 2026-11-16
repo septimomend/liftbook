@@ -1,5 +1,5 @@
 // Offline support. Bump VERSION on every release so phones pick up the new app shell.
-const VERSION = "v4";
+const VERSION = "v5";
 const CACHE = `liftbook-${VERSION}`;
 const SHELL = [
   "./", "./index.html", "./manifest.webmanifest", "./css/app.css",
