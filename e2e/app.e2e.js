@@ -526,3 +526,13 @@ test("tab bar icons are one drawn set, not font glyphs or emoji", async () => {
   await shot(page, "tabs");
   assert.deepEqual(errors, []);
 });
+
+test("settings shows the version even without Google sync configured", async () => {
+  const { page, errors } = await newPage();
+  await loadPlan(page);
+  await page.goto(base + "#/settings");
+  const { VERSION } = await import("../app/js/version.js");
+  await page.locator(".about", { hasText: `Liftbook ${VERSION}` }).waitFor();
+  assert.match(await page.locator(".about").innerText(), /screen \d+ · page \d+ · inset \d+ · browser/);
+  assert.deepEqual(errors, []);
+});

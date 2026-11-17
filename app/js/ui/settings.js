@@ -6,6 +6,8 @@ import { h, mount, toJpeg, forgetPictures } from "../dom.js";
 import { renderDriveCard, runSync, syncConfigured } from "../sync-ui.js";
 import { pictureIdFromFileName, DEFAULTS } from "../model.js";
 import { ACCENTS, applyAccent } from "../theme.js";
+import { VERSION } from "../version.js";
+import { screenInfo } from "../layout.js";
 
 export async function render(root, ctx) {
   const settings = await getSettings();
@@ -124,6 +126,13 @@ export async function render(root, ctx) {
       h("p", { class: "muted" }, t("Pick picture files named like the ones in the Liftbook folder on Drive (for example 1a2b3c4d5e6f.jpg). Each replaces the picture with the same name.")),
       picturesInput),
     status,
+    h("p", { class: "muted about" }, `Liftbook ${VERSION}`, h("br"), screenLine()),
   );
   await renderDriveCard(driveCard);
+}
+
+/** Tiny screen report for troubleshooting layout on the phone: screen / page height, bottom inset, mode. */
+function screenLine() {
+  const i = screenInfo();
+  return `screen ${i.screenH} · page ${i.viewH} · inset ${Math.round(i.insetBottom)} · ${i.standalone ? "app" : "browser"}`;
 }

@@ -3,7 +3,6 @@ import { syncNow } from "./sync.js";
 import { t, getLang } from "./i18n.js";
 import { getSyncMeta, saveSyncMeta } from "./store.js";
 import { GOOGLE_CLIENT_ID } from "./config.js";
-import { VERSION } from "./version.js";
 import { preloadAuth, signOut } from "./auth.js";
 import { h, mount } from "./dom.js";
 
@@ -101,6 +100,5 @@ export async function renderDriveCard(card) {
       await saveSyncMeta({ ...meta, signedIn: false });
       hideBanner();
       renderDriveCard(card);
-    } }, t("Sign out")) : null,
-    h("p", { class: "muted" }, `Liftbook ${VERSION}`));
+    } }, t("Sign out")) : null);
 }

@@ -3,6 +3,7 @@ import { t, setLang, resolveLang } from "./i18n.js";
 import { h, forgetPictures } from "./dom.js";
 import { autoSync } from "./sync-ui.js";
 import { applyAccent } from "./theme.js";
+import { fitScreen } from "./layout.js";
 import * as today from "./ui/today.js";
 import * as workout from "./ui/workout.js";
 import * as editor from "./ui/editor.js";
@@ -93,6 +94,7 @@ async function start() {
   const prefs = await getSettings();
   setLang(resolveLang(prefs.lang, navigator.languages));
   applyAccent(prefs.accent);
+  fitScreen();
   if ("serviceWorker" in navigator && (location.protocol === "https:" || ["localhost", "127.0.0.1"].includes(location.hostname))) {
     navigator.serviceWorker.register("./sw.js").catch(() => {});
   }
