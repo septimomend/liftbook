@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   DEFAULTS, newId, parseWeight, nextDay, performed, setWorkingWeight,
   updateExercise, addExercise, removeExercise, moveExercise,
-  addDay, removeDay, moveDay, updateDay, lastSessionSets, pictureIdFromFileName, restAfterSet, progressPoints, niceTicks,
+  addDay, removeDay, moveDay, updateDay, lastSessionSets, pictureIdFromFileName, restBeforeNext, progressPoints, niceTicks,
 } from "../app/js/model.js";
 
 const ex = (id, extra = {}) => ({
@@ -116,13 +116,10 @@ test("DEFAULTS rest between exercises is 2:30", () => {
   assert.equal(DEFAULTS.restExSec, 150);
 });
 
-test("restAfterSet: sets rest until the target sets are done, then rest between exercises", () => {
-  const settings = { restSec: 90, restExSec: 150 };
-  assert.deepEqual(restAfterSet({ set: 1, sets: 3, isLastExercise: false }, settings), { sec: 90, between: false });
-  assert.deepEqual(restAfterSet({ set: 3, sets: 3, isLastExercise: false }, settings), { sec: 150, between: true });
-  assert.deepEqual(restAfterSet({ set: 4, sets: 3, isLastExercise: false }, settings), { sec: 150, between: true });
-  assert.deepEqual(restAfterSet({ set: 3, sets: 3, isLastExercise: true }, settings), { sec: 90, between: false });
-  assert.deepEqual(restAfterSet({ set: 3, sets: 3, isLastExercise: false }, { restSec: 60 }), { sec: 150, between: true });
+test("restBeforeNext: rest between exercises only after doing sets", () => {
+  assert.equal(restBeforeNext({ loggedSets: 4 }, { restSec: 90, restExSec: 150 }), 150);
+  assert.equal(restBeforeNext({ loggedSets: 1 }, { restSec: 90 }), 150);
+  assert.equal(restBeforeNext({ loggedSets: 0 }, { restSec: 90, restExSec: 150 }), null);
 });
 
 test("progressPoints: heaviest weight per workout, oldest first", () => {

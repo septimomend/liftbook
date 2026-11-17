@@ -388,21 +388,30 @@ test("rest over: Skip turns into a forward arrow", async () => {
   assert.deepEqual(errors, []);
 });
 
-test("last target set rests 2:30 before the next exercise, then moves to it", async () => {
+test("extra sets keep the set rest; Next starts the 2:30 rest on the next exercise", async () => {
   const { page, errors } = await newPage();
   await startDay1(page);
-  for (const n of [1, 2]) {
+  for (const n of [1, 2, 3, 4]) { // one more than planned
     await page.getByRole("button", { name: /Log set & rest 1:30/ }).click();
     await page.getByRole("button", { name: "Skip" }).click();
-    await page.locator(".w-target", { hasText: `Set ${n + 1} of 3` }).waitFor();
+    await page.locator(".w-sets .set").nth(n - 1).waitFor();
   }
-  await page.getByRole("button", { name: /Log set & rest 2:30/ }).click();
+  await page.locator(".w-name", { hasText: /^Bench press$/ }).waitFor();
+  await page.getByRole("button", { name: "Next" }).click();
+  await page.locator(".w-name", { hasText: /^Cable flye$/ }).waitFor();
   const clock = page.locator(".rest-overlay .clock");
   await clock.waitFor();
   assert.match(await clock.innerText(), /^2:(30|29)$/);
   await page.locator(".rest-overlay", { hasText: "Cable flye" }).waitFor();
   await page.getByRole("button", { name: "Skip" }).click();
+  await page.locator(".rest-overlay").waitFor({ state: "detached" });
   await page.locator(".w-name", { hasText: /^Cable flye$/ }).waitFor();
+  // nothing logged on Cable flye: Next moves on without a rest; Prev never rests
+  await page.getByRole("button", { name: "Next" }).click();
+  await page.locator(".w-name", { hasText: /^Incline walk$/ }).waitFor();
+  await page.getByRole("button", { name: "Prev" }).click();
+  await page.locator(".w-name", { hasText: /^Cable flye$/ }).waitFor();
+  assert.equal(await page.locator(".rest-overlay").count(), 0);
   assert.deepEqual(errors, []);
 });
 

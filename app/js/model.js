@@ -117,13 +117,11 @@ export function pictureIdFromFileName(name, ids) {
 }
 
 /**
- * Rest after logging set number `set` of an exercise with `sets` target sets: the set
- * rest, or once the target is reached the (longer) rest before the next exercise.
- * The last exercise of the day has no next one, so it keeps the set rest.
+ * Rest when moving on with Next: the rest between exercises, but only if sets were
+ * logged on the exercise being left (skipping an exercise needs no rest). null = none.
  */
-export function restAfterSet({ set, sets, isLastExercise }, settings) {
-  if (set >= sets && !isLastExercise) return { sec: settings.restExSec ?? DEFAULTS.restExSec, between: true };
-  return { sec: settings.restSec ?? DEFAULTS.restSec, between: false };
+export function restBeforeNext({ loggedSets }, settings) {
+  return loggedSets > 0 ? settings.restExSec ?? DEFAULTS.restExSec : null;
 }
 
 /** One point per workout: its heaviest set weight, oldest workout first. Cardio-only workouts are skipped. */

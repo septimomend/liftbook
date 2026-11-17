@@ -3,7 +3,7 @@ import {
   getProgram, saveProgram, getSession, saveSession, getSettings,
   addLog, deleteLog, logsForExercise,
 } from "../store.js";
-import { newId, parseWeight, performed, setWorkingWeight, lastSessionSets, restAfterSet } from "../model.js";
+import { newId, parseWeight, performed, setWorkingWeight, lastSessionSets, restBeforeNext } from "../model.js";
 import { startRest, fmt } from "../timer.js";
 import { h, mount, picture, fmtWeight } from "../dom.js";
 import { showRest } from "./rest.js";
@@ -29,19 +29,13 @@ export async function render(root, { navigate }) {
     await saveSession(session);
   };
 
-  // a rest between exercises ends by moving on to the next exercise (session.restAdvance)
   const openRest = (caption) => {
     rest?.destroy();
     rest = showRest(document.body, {
       endsAt: session.restEndsAt,
       caption,
       onChange: end => persistSession({ restEndsAt: end }),
-      onClose: async () => {
-        rest = null;
-        const advance = session.restAdvance;
-        await persistSession({ restEndsAt: null, restAdvance: false, ...(advance ? { index: session.index + 1 } : {}) });
-        if (advance) { editingWeight = false; draw(); }
-      },
+      onClose: () => { rest = null; persistSession({ restEndsAt: null }); },
     });
   };
 
@@ -62,7 +56,6 @@ export async function render(root, { navigate }) {
     const isCardio = ex.type === "cardio";
     const nextSet = mine.length + 1;
     const isLast = index === d.exercises.length - 1;
-    const after = restAfterSet({ set: nextSet, sets: ex.sets, isLastExercise: isLast }, settings);
 
     // weight (tap to edit -> updates the plan)
     let weightEl;
@@ -99,7 +92,7 @@ export async function render(root, { navigate }) {
     } else {
       const wIn = h("input", { name: "log-weight", inputmode: "decimal", value: perf.weight ?? "", "aria-label": t("Weight") });
       const rIn = h("input", { name: "log-reps", inputmode: "numeric", value: ex.repsMax, "aria-label": t("Reps") });
-      const btn = h("button", { class: "big primary" }, t("Log set & rest {time}", { time: fmt(after.sec) }));
+      const btn = h("button", { class: "big primary" }, t("Log set & rest {time}", { time: fmt(settings.restSec) }));
       const validate = () => {
         btn.disabled = parseWeight(wIn.value) == null || !(parseInt(rIn.value, 10) > 0);
       };
@@ -116,11 +109,9 @@ export async function render(root, { navigate }) {
         if (weight == null || !(reps > 0)) return;
         await addLog({ id: newId(), sessionId: session.id, ts: Date.now(), dayId: d.id, exerciseId: ex.id,
           altId, name: perf.name, set: nextSet, weight, reps });
-        await persistSession({ index, restEndsAt: startRest(Date.now(), after.sec), restAdvance: after.between });
+        await persistSession({ restEndsAt: startRest(Date.now(), settings.restSec) });
         await draw();
-        openRest(after.between
-          ? t("Resting · next: {name}", { name: performed(d.exercises[index + 1], session.swaps[d.exercises[index + 1].id] ?? null).name })
-          : t("Resting · next: set {n} of {name}", { n: nextSet + 1, name: perf.name }));
+        openRest(t("Resting · next: set {n} of {name}", { n: nextSet + 1, name: perf.name }));
       });
       validate();
       logRow = [
@@ -176,7 +167,15 @@ export async function render(root, { navigate }) {
               navigate("#/");
               await sync;
             } }, t("Finish"))
-          : h("button", { onClick: () => go(1) }, t("Next"))),
+          : h("button", { onClick: async () => {
+              // rest between exercises starts here, not after the planned last set: extra sets are common
+              const sec = restBeforeNext({ loggedSets: mine.length }, settings);
+              await go(1);
+              if (sec == null) return;
+              const nx = d.exercises[index + 1];
+              await persistSession({ restEndsAt: startRest(Date.now(), sec) });
+              openRest(t("Resting · next: {name}", { name: performed(nx, session.swaps[nx.id] ?? null).name }));
+            } }, t("Next"))),
     ]);
   }
 
