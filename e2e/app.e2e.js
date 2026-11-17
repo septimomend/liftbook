@@ -536,3 +536,13 @@ test("settings shows the version even without Google sync configured", async () 
   assert.match(await page.locator(".about").innerText(), /screen \d+ · page \d+ · inset \d+ · browser/);
   assert.deepEqual(errors, []);
 });
+
+test("short pages are at least screen-tall, so the tab bar sits like on long pages", async () => {
+  const { page, errors } = await newPage();
+  await loadPlan(page);
+  const [appH, vh] = await page.evaluate(() => [document.getElementById("app").offsetHeight, innerHeight]);
+  assert.ok(appH >= vh, `${appH} < ${vh}`);
+  const bar = await page.locator(".tabs").boundingBox();
+  assert.ok(Math.abs(bar.y + bar.height - 844) < 1);
+  assert.deepEqual(errors, []);
+});
