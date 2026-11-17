@@ -546,3 +546,13 @@ test("short pages are at least screen-tall, so the tab bar sits like on long pag
   assert.ok(Math.abs(bar.y + bar.height - 844) < 1);
   assert.deepEqual(errors, []);
 });
+
+test("picture tools are hidden in Settings (kept in code, flag off)", async () => {
+  const { page, errors } = await newPage();
+  await loadPlan(page);
+  await page.goto(base + "#/settings");
+  await page.getByRole("button", { name: "Export backup" }).waitFor();
+  assert.equal(await page.getByRole("button", { name: "Replace pictures" }).count(), 0);
+  assert.equal(await page.getByRole("button", { name: "Re-download pictures from Drive" }).count(), 0);
+  assert.deepEqual(errors, []);
+});

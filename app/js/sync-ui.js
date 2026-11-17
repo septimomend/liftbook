@@ -3,6 +3,7 @@ import { syncNow } from "./sync.js";
 import { t, getLang } from "./i18n.js";
 import { getSyncMeta, saveSyncMeta } from "./store.js";
 import { GOOGLE_CLIENT_ID } from "./config.js";
+import { SHOW_PICTURE_TOOLS } from "./features.js";
 import { preloadAuth, signOut } from "./auth.js";
 import { h, mount } from "./dom.js";
 
@@ -93,7 +94,7 @@ export async function renderDriveCard(card) {
   mount(card,
     status,
     syncBtn,
-    meta.signedIn ? picsBtn : null,
+    meta.signedIn && SHOW_PICTURE_TOOLS ? picsBtn : null,
     meta.signedIn ? h("button", { class: "link danger", onClick: async () => {
       if (!confirm(t("Sign out of Google on this phone? Your data stays here and on Drive."))) return;
       signOut();

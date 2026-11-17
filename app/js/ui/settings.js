@@ -7,6 +7,7 @@ import { renderDriveCard, runSync, syncConfigured } from "../sync-ui.js";
 import { pictureIdFromFileName, DEFAULTS } from "../model.js";
 import { ACCENTS, applyAccent } from "../theme.js";
 import { VERSION } from "../version.js";
+import { SHOW_PICTURE_TOOLS } from "../features.js";
 import { screenInfo } from "../layout.js";
 
 export async function render(root, ctx) {
@@ -122,8 +123,8 @@ export async function render(root, ctx) {
       h("button", { class: "big", onClick: () => importInput.click() }, t("Import file")),
       h("p", { class: "muted" }, t("Load a backup or your liftbook-import.json. Replaces the data on this phone.")),
       importInput,
-      h("button", { class: "big", onClick: () => picturesInput.click() }, t("Replace pictures")),
-      h("p", { class: "muted" }, t("Pick picture files named like the ones in the Liftbook folder on Drive (for example 1a2b3c4d5e6f.jpg). Each replaces the picture with the same name.")),
+      SHOW_PICTURE_TOOLS ? h("button", { class: "big", onClick: () => picturesInput.click() }, t("Replace pictures")) : null,
+      SHOW_PICTURE_TOOLS ? h("p", { class: "muted" }, t("Pick picture files named like the ones in the Liftbook folder on Drive (for example 1a2b3c4d5e6f.jpg). Each replaces the picture with the same name.")) : null,
       picturesInput),
     status,
     h("p", { class: "muted about" }, `Liftbook ${VERSION}`, h("br"), screenLine()),
