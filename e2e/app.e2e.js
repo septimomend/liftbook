@@ -487,3 +487,18 @@ test("sync bar: a failing sync says so and can be tapped again", async () => {
   assert.equal(await bar.isEnabled(), true);
   assert.deepEqual(errors.filter(e => !/ERR_FAILED/.test(e)), []);
 });
+
+test("settings: accent color changes buttons and survives a restart", async () => {
+  const { page, errors } = await newPage();
+  await loadPlan(page);
+  await page.goto(base + "#/settings");
+  await page.getByRole("radio", { name: "Orange" }).check();
+  const bg = () => page.evaluate(() => getComputedStyle(document.querySelector(".tabs a.on")).color);
+  await page.waitForFunction(() => getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() === "#ff8a3d");
+  await page.reload();
+  await page.getByRole("radio", { name: "Orange" }).waitFor();
+  assert.equal(await page.getByRole("radio", { name: "Orange" }).isChecked(), true);
+  assert.equal(await bg(), "rgb(255, 138, 61)");
+  await shot(page, "settings-accent");
+  assert.deepEqual(errors, []);
+});

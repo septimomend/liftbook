@@ -2,6 +2,7 @@ import { bootstrap, getSettings } from "./store.js";
 import { t, setLang, resolveLang } from "./i18n.js";
 import { h, forgetPictures } from "./dom.js";
 import { autoSync } from "./sync-ui.js";
+import { applyAccent } from "./theme.js";
 import * as today from "./ui/today.js";
 import * as workout from "./ui/workout.js";
 import * as editor from "./ui/editor.js";
@@ -75,7 +76,9 @@ window.addEventListener("liftbook:data", () => { forgetPictures(); render(); });
 async function start() {
   navigator.storage?.persist?.().catch(() => {});
   await bootstrap(async () => ({ version: 1, days: [], updatedAt: 0 }));
-  setLang(resolveLang((await getSettings()).lang, navigator.languages));
+  const prefs = await getSettings();
+  setLang(resolveLang(prefs.lang, navigator.languages));
+  applyAccent(prefs.accent);
   if ("serviceWorker" in navigator && (location.protocol === "https:" || ["localhost", "127.0.0.1"].includes(location.hostname))) {
     navigator.serviceWorker.register("./sw.js").catch(() => {});
   }

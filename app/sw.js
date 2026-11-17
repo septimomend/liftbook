@@ -1,5 +1,5 @@
 // Offline support. Bump VERSION on every release so phones pick up the new app shell.
-const VERSION = "v9";
+const VERSION = "v10";
 const CACHE = `liftbook-${VERSION}`;
 const SHELL = [
   "./", "./index.html", "./manifest.webmanifest", "./css/app.css",
@@ -7,7 +7,7 @@ const SHELL = [
   "./js/main.js", "./js/dom.js", "./js/model.js", "./js/store.js", "./js/timer.js",
   "./js/backup.js", "./js/config.js", "./js/i18n.js", "./js/version.js", "./js/auth.js", "./js/drive.js", "./js/sync.js", "./js/sync-ui.js",
   "./js/ui/today.js", "./js/ui/workout.js", "./js/ui/rest.js", "./js/ui/editor.js",
-  "./js/ui/history.js", "./js/ui/settings.js", "./js/ui/chart.js",
+  "./js/ui/history.js", "./js/ui/settings.js", "./js/ui/chart.js", "./js/theme.js",
 ];
 
 self.addEventListener("install", e => {

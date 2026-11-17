@@ -5,6 +5,7 @@ import { fmt } from "../timer.js";
 import { h, mount, toJpeg, forgetPictures } from "../dom.js";
 import { renderDriveCard, runSync, syncConfigured } from "../sync-ui.js";
 import { pictureIdFromFileName, DEFAULTS } from "../model.js";
+import { ACCENTS, applyAccent } from "../theme.js";
 
 export async function render(root, ctx) {
   const settings = await getSettings();
@@ -17,6 +18,21 @@ export async function render(root, ctx) {
     Array.from({ length: 17 }, (_, i) => 60 + i * 15).map(s =>
       h("option", { value: s, selected: s === (settings.restExSec ?? DEFAULTS.restExSec) }, fmt(s))));
   restEx.addEventListener("change", async () => saveSettings({ ...(await getSettings()), restExSec: Number(restEx.value) }));
+
+  const colorName = {
+    blue: t("Blue"), orange: t("Orange"), green: t("Green"), teal: t("Teal"),
+    purple: t("Purple"), pink: t("Pink"), red: t("Red"), yellow: t("Yellow"),
+  };
+  const current = ACCENTS[settings.accent] ? settings.accent : "blue";
+  const colors = h("div", { class: "swatches", role: "radiogroup", "aria-label": t("Color") },
+    Object.entries(ACCENTS).map(([name, hex]) => {
+      const input = h("input", { type: "radio", name: "accent", value: name, checked: name === current, "aria-label": colorName[name] });
+      input.addEventListener("change", async () => {
+        applyAccent(name);
+        await saveSettings({ ...(await getSettings()), accent: name });
+      });
+      return h("label", { class: "swatch", style: `--sw:${hex}`, title: colorName[name] }, input);
+    }));
 
   const language = h("select", { name: "language" },
     h("option", { value: "auto", selected: !settings.lang || settings.lang === "auto" }, t("Automatic (phone language)")),
@@ -92,6 +108,7 @@ export async function render(root, ctx) {
   root.append(
     h("h1", null, t("Settings")),
     h("label", null, t("Language")), language,
+    h("label", null, t("Color")), colors,
     h("label", null, t("Rest between sets")), rest,
     h("label", null, t("Rest between exercises")), restEx,
     h("h2", null, t("Google Drive")),

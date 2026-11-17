@@ -180,3 +180,10 @@ label { display: block; margin: 12px 0 4px; color: var(--muted); font-size: 14px
 .chart .cross { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
 .chart-tip { margin: 6px 8px 4px; font-size: 14px; color: var(--text); min-height: 1.4em; }
 .chart-tip b { font-size: 16px; }
+
+/* accent color picker (Settings) */
+.swatches { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 8px; }
+.swatch { position: relative; width: 44px; height: 44px; margin: 0; border-radius: 50%; background: var(--sw); cursor: pointer; }
+.swatch input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+.swatch:has(input:checked) { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--text); }
+.swatch:has(input:focus-visible) { outline: 2px solid var(--text); outline-offset: 4px; }
