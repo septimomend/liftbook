@@ -9,6 +9,7 @@ import { restView, adjustRest } from "../timer.js";
  */
 export function showRest(parent, { endsAt, caption, onChange, onClose }) {
   let end = endsAt;
+  const skip = h("button", { class: "primary", onClick: () => close() }, t("Skip"));
   const clock = h("div", { class: "clock", role: "timer" });
   const overlay = h("div", { class: "rest-overlay" },
     h("div", { class: "muted" }, caption),
@@ -16,12 +17,19 @@ export function showRest(parent, { endsAt, caption, onChange, onClose }) {
     h("div", { class: "row" },
       h("button", { onClick: () => shift(-15) }, t("−15s")),
       h("button", { onClick: () => shift(15) }, t("+15s")),
-      h("button", { class: "primary", onClick: () => close() }, t("Skip"))));
+      skip));
 
   const tick = () => {
     const v = restView(end, Date.now());
     clock.textContent = v.over ? t("Rest over · {time} ago", { time: v.clock }) : v.clock;
     overlay.classList.toggle("over", v.over);
+    // once the rest is over, "Skip" becomes a plain forward arrow
+    const label = v.over ? t("Continue") : t("Skip");
+    if (skip.getAttribute("aria-label") !== label) {
+      skip.setAttribute("aria-label", label);
+      skip.textContent = v.over ? "→" : t("Skip");
+      skip.classList.toggle("arrow", v.over);
+    }
   };
   const shift = d => {
     end = adjustRest(end, Date.now(), d);

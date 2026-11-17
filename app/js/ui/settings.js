@@ -4,7 +4,7 @@ import { buildBackup, parseBackup, backupFileName, shareOrDownload } from "../ba
 import { fmt } from "../timer.js";
 import { h, mount, toJpeg, forgetPictures } from "../dom.js";
 import { renderDriveCard, runSync, syncConfigured } from "../sync-ui.js";
-import { pictureIdFromFileName } from "../model.js";
+import { pictureIdFromFileName, DEFAULTS } from "../model.js";
 
 export async function render(root, ctx) {
   const settings = await getSettings();
@@ -13,6 +13,10 @@ export async function render(root, ctx) {
     Array.from({ length: 17 }, (_, i) => 60 + i * 15).map(s =>
       h("option", { value: s, selected: s === settings.restSec }, fmt(s))));
   rest.addEventListener("change", async () => saveSettings({ ...(await getSettings()), restSec: Number(rest.value) }));
+  const restEx = h("select", { name: "rest-exercise" },
+    Array.from({ length: 17 }, (_, i) => 60 + i * 15).map(s =>
+      h("option", { value: s, selected: s === (settings.restExSec ?? DEFAULTS.restExSec) }, fmt(s))));
+  restEx.addEventListener("change", async () => saveSettings({ ...(await getSettings()), restExSec: Number(restEx.value) }));
 
   const language = h("select", { name: "language" },
     h("option", { value: "auto", selected: !settings.lang || settings.lang === "auto" }, t("Automatic (phone language)")),
@@ -89,6 +93,7 @@ export async function render(root, ctx) {
     h("h1", null, t("Settings")),
     h("label", null, t("Language")), language,
     h("label", null, t("Rest between sets")), rest,
+    h("label", null, t("Rest between exercises")), restEx,
     h("h2", null, t("Google Drive")),
     driveCard,
     h("h2", null, t("Backup file")),

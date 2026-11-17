@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   DEFAULTS, newId, parseWeight, nextDay, performed, setWorkingWeight,
   updateExercise, addExercise, removeExercise, moveExercise,
-  addDay, removeDay, moveDay, updateDay, lastSessionSets, pictureIdFromFileName,
+  addDay, removeDay, moveDay, updateDay, lastSessionSets, pictureIdFromFileName, restAfterSet, progressPoints, niceTicks,
 } from "../app/js/model.js";
 
 const ex = (id, extra = {}) => ({
@@ -20,7 +20,7 @@ const prog = () => ({
 });
 
 test("DEFAULTS", () => {
-  assert.deepEqual(DEFAULTS, { sets: 3, repsMin: 8, repsMax: 12, restSec: 90 });
+  assert.deepEqual(DEFAULTS, { sets: 3, repsMin: 8, repsMax: 12, restSec: 90, restExSec: 150 });
 });
 
 test("newId is unique string", () => {
@@ -110,4 +110,34 @@ test("pictureIdFromFileName matches a picture by file name", () => {
   assert.equal(pictureIdFromFileName("0123456789ab", ids), "0123456789ab");
   assert.equal(pictureIdFromFileName("IMG_1234.jpg", ids), null);
   assert.equal(pictureIdFromFileName("ffffffffffff.jpg", ids), null);
+});
+
+test("DEFAULTS rest between exercises is 2:30", () => {
+  assert.equal(DEFAULTS.restExSec, 150);
+});
+
+test("restAfterSet: sets rest until the target sets are done, then rest between exercises", () => {
+  const settings = { restSec: 90, restExSec: 150 };
+  assert.deepEqual(restAfterSet({ set: 1, sets: 3, isLastExercise: false }, settings), { sec: 90, between: false });
+  assert.deepEqual(restAfterSet({ set: 3, sets: 3, isLastExercise: false }, settings), { sec: 150, between: true });
+  assert.deepEqual(restAfterSet({ set: 4, sets: 3, isLastExercise: false }, settings), { sec: 150, between: true });
+  assert.deepEqual(restAfterSet({ set: 3, sets: 3, isLastExercise: true }, settings), { sec: 90, between: false });
+  assert.deepEqual(restAfterSet({ set: 3, sets: 3, isLastExercise: false }, { restSec: 60 }), { sec: 150, between: true });
+});
+
+test("progressPoints: heaviest weight per workout, oldest first", () => {
+  const l = (sessionId, ts, set, weight, reps, extra = {}) => ({ id: `${sessionId}-${set}`, sessionId, ts, exerciseId: "e", set, weight, reps, ...extra });
+  const pts = progressPoints([
+    l("s2", 2000, 1, 72.5, 8), l("s2", 2100, 2, 75, 6),
+    l("s1", 1000, 1, 70, 10), l("s1", 1100, 2, 70, 9),
+    l("s3", 3000, 1, null, null, { done: true }),
+  ]);
+  assert.deepEqual(pts.map(p => [p.sessionId, p.ts, p.weight]), [["s1", 1000, 70], ["s2", 2000, 75]]);
+  assert.deepEqual(pts[1].sets.map(s => `${s.weight}x${s.reps}`), ["72.5x8", "75x6"]);
+});
+
+test("niceTicks spans the data with round steps", () => {
+  assert.deepEqual(niceTicks(62.5, 80), [60, 65, 70, 75, 80]);
+  assert.deepEqual(niceTicks(70, 70), [65, 70, 75]);
+  assert.deepEqual(niceTicks(0, 100), [0, 20, 40, 60, 80, 100]);
 });

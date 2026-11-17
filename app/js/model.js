@@ -1,6 +1,6 @@
 // Pure plan model: defaults, parsing, immutable plan edits, day sequencing.
 
-export const DEFAULTS = Object.freeze({ sets: 3, repsMin: 8, repsMax: 12, restSec: 90 });
+export const DEFAULTS = Object.freeze({ sets: 3, repsMin: 8, repsMax: 12, restSec: 90, restExSec: 150 });
 
 export function newId() {
   return crypto.randomUUID();
@@ -114,4 +114,48 @@ export function lastSessionSets(logs, exerciseId, excludeSessionId) {
 export function pictureIdFromFileName(name, ids) {
   const stem = name.toLowerCase().replace(/\.[a-z0-9]+$/, "").replace(/\s*\(\d+\)$/, "").trim();
   return ids.has(stem) ? stem : null;
+}
+
+/**
+ * Rest after logging set number `set` of an exercise with `sets` target sets: the set
+ * rest, or once the target is reached the (longer) rest before the next exercise.
+ * The last exercise of the day has no next one, so it keeps the set rest.
+ */
+export function restAfterSet({ set, sets, isLastExercise }, settings) {
+  if (set >= sets && !isLastExercise) return { sec: settings.restExSec ?? DEFAULTS.restExSec, between: true };
+  return { sec: settings.restSec ?? DEFAULTS.restSec, between: false };
+}
+
+/** One point per workout: its heaviest set weight, oldest workout first. Cardio-only workouts are skipped. */
+export function progressPoints(logs) {
+  const bySession = new Map();
+  for (const l of logs) {
+    if (l.weight == null) continue;
+    if (!bySession.has(l.sessionId)) bySession.set(l.sessionId, []);
+    bySession.get(l.sessionId).push(l);
+  }
+  return [...bySession].map(([sessionId, sets]) => {
+    sets.sort((a, b) => a.set - b.set);
+    return { sessionId, ts: Math.min(...sets.map(x => x.ts)), weight: Math.max(...sets.map(x => x.weight)), sets };
+  }).sort((a, b) => a.ts - b.ts);
+}
+
+/** Round axis ticks (steps of 1, 2, 2.5 or 5 × 10^n) covering [min, max]; a flat range gets one step each side. */
+export function niceTicks(min, max, target = 5) {
+  if (min === max) {
+    const step = niceStep(Math.max(Math.abs(min), 1) / 20);
+    return [min - step, min, min + step];
+  }
+  const step = niceStep((max - min) / target);
+  const lo = Math.floor(min / step) * step;
+  const hi = Math.ceil(max / step) * step;
+  const ticks = [];
+  for (let v = lo; v <= hi + step / 2; v += step) ticks.push(Math.round(v * 100) / 100);
+  return ticks;
+}
+
+function niceStep(raw) {
+  const pow = 10 ** Math.floor(Math.log10(raw));
+  const f = raw / pow;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * pow;
 }

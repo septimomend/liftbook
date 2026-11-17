@@ -117,7 +117,7 @@ label { display: block; margin: 12px 0 4px; color: var(--muted); font-size: 14px
 .pic-thumb { width: 56px; height: 56px; flex: 0 0 56px; border-radius: 10px; }
 
 /* workout */
-.w-head { display: flex; justify-content: space-between; color: var(--muted); font-size: 14px; margin-bottom: 8px; }
+.w-head { display: flex; justify-content: space-between; color: var(--text); font-size: 15px; font-weight: 600; margin-bottom: 8px; }
 .w-name { font-size: 24px; font-weight: 700; margin: 12px 0 0; }
 .w-weight { font-size: 44px; font-weight: 800; margin: 2px 0; background: none; padding: 0; min-height: 0; text-align: left; }
 .w-weight small { font-size: 14px; font-weight: 400; color: var(--muted); margin-left: 8px; }
@@ -165,3 +165,18 @@ label { display: block; margin: 12px 0 4px; color: var(--muted); font-size: 14px
   background: var(--accent); color: var(--accent-text); font-weight: 600;
   box-shadow: 0 6px 20px rgb(0 0 0 / .35);
 }
+
+.rest-overlay button.arrow { font-size: 28px; line-height: 1; }
+
+/* progress chart (History → exercise) */
+.chart-card { position: relative; padding: 12px 8px 4px; }
+.chart { display: block; width: 100%; height: auto; overflow: visible; touch-action: manipulation; }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart .tick { fill: var(--muted); font-size: 11px; }
+.chart .line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart .pt { fill: var(--accent); stroke: var(--surface); stroke-width: 2; }
+.chart .pt.on { r: 6; }
+.chart .hit { fill: transparent; cursor: pointer; }
+.chart .cross { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
+.chart-tip { margin: 6px 8px 4px; font-size: 14px; color: var(--text); min-height: 1.4em; }
+.chart-tip b { font-size: 16px; }

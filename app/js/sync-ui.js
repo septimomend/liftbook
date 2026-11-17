@@ -9,10 +9,17 @@ import { h, mount } from "./dom.js";
 
 let banner = null;
 
-function showBanner() {
-  if (banner) return;
-  banner = h("button", { class: "sync-banner", onClick: () => runSync(true) }, t("Tap to sync with Google Drive"));
-  document.body.append(banner);
+function showBanner(text = t("Tap to sync with Google Drive")) {
+  if (!banner) {
+    banner = h("button", { class: "sync-banner", onClick: async () => {
+      banner.disabled = true;
+      banner.textContent = t("Syncing…");
+      await runSync(true);
+      if (banner) banner.disabled = false;
+    } });
+    document.body.append(banner);
+  }
+  banner.textContent = text;
 }
 
 function hideBanner() {
@@ -21,13 +28,24 @@ function hideBanner() {
 }
 
 /** interactive=true only from a tap: it may open Google's "Continue as …" sheet. */
+const RETRY_MS = 1500;
+const authReasons = new Set(["needs-sign-in", "needs-permission"]);
+
 export async function runSync(interactive, { refreshPictures = false } = {}) {
-  const r = await syncNow({ interactive, refreshPictures });
+  let r = await syncNow({ interactive, refreshPictures });
+  // a network hiccup (often right after returning from Google's sign-in sheet): retry once;
+  // the token is cached by now, so no tap is needed
+  if (!r.ok && !authReasons.has(r.reason) && r.reason !== "offline" && r.reason !== "not-configured") {
+    await new Promise(res => setTimeout(res, RETRY_MS));
+    r = await syncNow({ interactive: false, refreshPictures });
+  }
   if (r.ok) {
     hideBanner();
     if (r.pulled) window.dispatchEvent(new Event("liftbook:data"));
-  } else if (r.reason === "needs-sign-in" && (await getSyncMeta()).signedIn) {
+  } else if (authReasons.has(r.reason) && (await getSyncMeta()).signedIn) {
     showBanner();
+  } else if (banner) {
+    showBanner(t("Sync failed — tap to retry"));
   }
   window.dispatchEvent(new CustomEvent("liftbook:sync", { detail: r }));
   return r;

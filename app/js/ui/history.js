@@ -1,6 +1,8 @@
 import { allLogs, logsForExercise, getProgram } from "../store.js";
 import { t, getLang } from "../i18n.js";
 import { h, mount } from "../dom.js";
+import { progressPoints } from "../model.js";
+import { progressChart } from "./chart.js";
 
 const setLabel = l => (l.done ? t("done") : `${l.weight}×${l.reps}`);
 const dateFmt = ts => new Date(ts).toLocaleDateString(getLang(), { weekday: "short", day: "numeric", month: "short", year: "numeric" });
@@ -16,9 +18,13 @@ export async function render(root, { params }) {
       if (!sessions.has(l.sessionId)) sessions.set(l.sessionId, []);
       sessions.get(l.sessionId).push(l);
     }
+    const points = progressPoints(logs);
+    const shortDate = ts => new Date(ts).toLocaleDateString(getLang(), { day: "numeric", month: "short" });
     mount(root,
       h("a", { class: "back", href: "#/history" }, t("‹ History")),
       h("h1", null, names.get(params.exerciseId) ?? logs[0]?.name ?? t("Exercise")),
+      points.length ? [h("h2", null, t("Progress")), h("p", { class: "muted" }, t("Heaviest weight per workout")),
+        progressChart(points, { fmtDate: shortDate, setText: sets => sets.map(setLabel).join(" · ") })] : null,
       [...sessions.values()].map(sets => {
         sets.sort((a, b) => a.set - b.set);
         const performedNames = [...new Set(sets.map(s => s.name))];

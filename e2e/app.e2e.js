@@ -199,7 +199,7 @@ test("history lists logged sets", async () => {
   await page.getByRole("button", { name: "Skip" }).click();
   await page.getByRole("link", { name: "History" }).click();
   await page.locator(".list a", { hasText: "Bench press" }).click();
-  await page.locator(".card", { hasText: "70×12" }).waitFor();
+  await page.locator(".card:not(.chart-card)", { hasText: "70×12" }).waitFor();
   await shot(page, "history");
   assert.deepEqual(errors, []);
 });
@@ -370,4 +370,120 @@ test("workout picture frame hugs a wide picture: no bars above or below", async 
   assert.ok(Math.abs(pic.width / pic.height - 800 / 450) < 0.02);
   await shot(page, "workout-picture");
   assert.deepEqual(errors, []);
+});
+
+test("rest over: Skip turns into a forward arrow", async () => {
+  const { page, errors } = await newPage();
+  await startDay1(page);
+  await setRest(page, 1);
+  await page.reload();
+  await page.getByRole("button", { name: /Log set & rest 0:01/ }).click();
+  const next = page.getByRole("button", { name: "Continue" });
+  await next.waitFor();
+  assert.equal((await next.innerText()).trim(), "→");
+  assert.equal(await page.getByRole("button", { name: "Skip" }).count(), 0);
+  await next.click();
+  await page.locator(".rest-overlay").waitFor({ state: "detached" });
+  await page.locator(".w-target", { hasText: "Set 2 of 3" }).waitFor();
+  assert.deepEqual(errors, []);
+});
+
+test("last target set rests 2:30 before the next exercise, then moves to it", async () => {
+  const { page, errors } = await newPage();
+  await startDay1(page);
+  for (const n of [1, 2]) {
+    await page.getByRole("button", { name: /Log set & rest 1:30/ }).click();
+    await page.getByRole("button", { name: "Skip" }).click();
+    await page.locator(".w-target", { hasText: `Set ${n + 1} of 3` }).waitFor();
+  }
+  await page.getByRole("button", { name: /Log set & rest 2:30/ }).click();
+  const clock = page.locator(".rest-overlay .clock");
+  await clock.waitFor();
+  assert.match(await clock.innerText(), /^2:(30|29)$/);
+  await page.locator(".rest-overlay", { hasText: "Cable flye" }).waitFor();
+  await page.getByRole("button", { name: "Skip" }).click();
+  await page.locator(".w-name", { hasText: /^Cable flye$/ }).waitFor();
+  assert.deepEqual(errors, []);
+});
+
+test("settings: rest between exercises, default 2:30", async () => {
+  const { page, errors } = await newPage();
+  await loadPlan(page);
+  await page.goto(base + "#/settings");
+  const sel = page.locator("select[name=rest-exercise]");
+  assert.equal(await sel.evaluate(s => s.selectedOptions[0].textContent), "2:30");
+  await sel.selectOption("180");
+  await page.waitForFunction(async () => (await (await import("./js/store.js")).getSettings()).restExSec === 180);
+  assert.deepEqual(errors, []);
+});
+
+test("history: progress graph of the heaviest weight per workout", async () => {
+  const { page, errors } = await newPage();
+  await loadPlan(page);
+  await page.evaluate(async () => {
+    const s = await import("./js/store.js");
+    const day = 86_400_000;
+    const t0 = Date.UTC(2026, 9, 1);
+    const sets = [[70, 10], [72.5, 8], [75, 6]];
+    for (const [i, [w, r]] of sets.entries()) {
+      for (const set of [1, 2]) {
+        await s.addLog({ id: `l${i}${set}`, sessionId: `s${i}`, ts: t0 + i * 3 * day + set, dayId: "d1", exerciseId: "e1",
+          altId: null, name: "Bench press", set, weight: set === 2 ? w : w - 10, reps: r });
+      }
+    }
+  });
+  await page.goto(base + "#/history/e1");
+  const pts = page.locator("svg.chart .pt");
+  await pts.first().waitFor();
+  assert.equal(await pts.count(), 3);
+  await pts.last().click();
+  await page.locator(".chart-tip", { hasText: "75 kg" }).waitFor();
+  assert.match(await page.locator(".chart-tip").innerText(), /65×6 · 75×6/);
+  await shot(page, "history-chart");
+  assert.deepEqual(errors, []);
+});
+
+/** Drive REST stand-in: empty Liftbook folder. failures = how many requests fail first (Infinity = all). */
+async function withFakeDrive(page, { failures = 0 } = {}) {
+  let left = failures;
+  await page.route("https://www.googleapis.com/**", r => {
+    if (left > 0) { left--; return r.abort("failed"); }
+    const url = r.request().url();
+    if (r.request().method() !== "GET") return r.fulfill({ json: { id: "D" } });
+    if (url.includes("mimeType")) return r.fulfill({ json: { files: [{ id: "F" }] } });
+    return r.fulfill({ json: { files: [] } });
+  });
+}
+
+async function signedInWithExpiredToken(page) {
+  await loadPlan(page);
+  await page.evaluate(async () => {
+    const s = await import("./js/store.js");
+    await s.saveSyncMeta({ ...(await s.getSyncMeta()), signedIn: true });
+  });
+  await page.reload();
+}
+
+test("sync bar: disappears after a sync that needed a retry", async () => {
+  const { page, errors } = await newPage();
+  await withFakeGoogle(page, { grant: true });
+  await withFakeDrive(page, { failures: 1 });
+  await signedInWithExpiredToken(page);
+  const bar = page.locator(".sync-banner");
+  await bar.waitFor();
+  await bar.click();
+  await bar.waitFor({ state: "detached" });
+  assert.deepEqual(errors.filter(e => !/ERR_FAILED/.test(e)), []);
+});
+
+test("sync bar: a failing sync says so and can be tapped again", async () => {
+  const { page, errors } = await newPage();
+  await withFakeGoogle(page, { grant: true });
+  await withFakeDrive(page, { failures: Infinity });
+  await signedInWithExpiredToken(page);
+  const bar = page.locator(".sync-banner");
+  await bar.click();
+  await page.locator(".sync-banner", { hasText: "Sync failed" }).waitFor();
+  assert.equal(await bar.isEnabled(), true);
+  assert.deepEqual(errors.filter(e => !/ERR_FAILED/.test(e)), []);
 });
