@@ -92,7 +92,7 @@ label { display: block; margin: 12px 0 4px; color: var(--muted); font-size: 14px
   color: var(--muted); text-decoration: none; font-size: 12px;
 }
 .tabs a.on { color: var(--accent); }
-.tabs .ico { font-size: 20px; line-height: 1; }
+.tabs .ico { display: flex; line-height: 0; }
 
 /* today */
 .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin: 0 -16px 8px; padding-left: 16px; padding-right: 16px; scrollbar-width: none; }

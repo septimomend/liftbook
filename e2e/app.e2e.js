@@ -512,3 +512,17 @@ test("settings: accent color changes buttons and survives a restart", async () =
   await shot(page, "settings-accent");
   assert.deepEqual(errors, []);
 });
+
+test("tab bar icons are one drawn set, not font glyphs or emoji", async () => {
+  const { page, errors } = await newPage();
+  await loadPlan(page);
+  const tabs = page.locator(".tabs a");
+  assert.equal(await tabs.count(), 4);
+  for (let i = 0; i < 4; i++) {
+    const ico = tabs.nth(i).locator(".ico");
+    assert.equal(await ico.locator("svg").count(), 1);
+    assert.equal((await ico.innerText()).trim(), "");
+  }
+  await shot(page, "tabs");
+  assert.deepEqual(errors, []);
+});
