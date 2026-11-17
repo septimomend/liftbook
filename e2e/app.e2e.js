@@ -495,6 +495,7 @@ test("settings: accent color changes buttons and survives a restart", async () =
   await page.getByRole("radio", { name: "Orange" }).check();
   const bg = () => page.evaluate(() => getComputedStyle(document.querySelector(".tabs a.on")).color);
   await page.waitForFunction(() => getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() === "#ff8a3d");
+  await page.waitForFunction(async () => (await (await import("./js/store.js")).getSettings()).accent === "orange");
   await page.reload();
   await page.getByRole("radio", { name: "Orange" }).waitFor();
   assert.equal(await page.getByRole("radio", { name: "Orange" }).isChecked(), true);
