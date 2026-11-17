@@ -556,3 +556,17 @@ test("picture tools are hidden in Settings (kept in code, flag off)", async () =
   assert.equal(await page.getByRole("button", { name: "Re-download pictures from Drive" }).count(), 0);
   assert.deepEqual(errors, []);
 });
+
+test("rest day is highlighted green: chip and card", async () => {
+  const { page, errors } = await newPage();
+  await loadPlan(page);
+  const green = "rgb(60, 207, 145)";
+  const chip = page.locator(".chip", { hasText: "Day 2" });
+  assert.equal(await chip.evaluate(e => getComputedStyle(e).color), green);
+  await chip.click();
+  await page.locator(".rest-day").waitFor();
+  assert.equal(await chip.evaluate(e => getComputedStyle(e).backgroundColor), green);
+  assert.equal(await page.locator(".rest-day").evaluate(e => getComputedStyle(e).color), green);
+  await shot(page, "rest-day");
+  assert.deepEqual(errors, []);
+});
